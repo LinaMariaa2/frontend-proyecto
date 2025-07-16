@@ -1,44 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   MagnifyingGlassIcon,
   EllipsisVerticalIcon,
+  PencilIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 
 export default function CultivosPage() {
   const [busqueda, setBusqueda] = useState("");
-  const [cultivos, setCultivos] = useState([
-    {
-      id: 1,
-      nombre_cultivo: "Tomate Cherry",
-      descripcion: "Cultivo experimental bajo luz artificial",
-      temp_min: 18.5,
-      temp_max: 28.0,
-      humedad_min: 50.0,
-      humedad_max: 80.0,
-      id_zona: 1,
-      id_invernadero: 1,
-      fecha_inicio: "2025-06-01",
-      fecha_fin: "2025-08-01",
-      estado: "activo",
-      imagen: "",
-    },
-  ]);
-
-  const invernaderos = [
-    { id: 1, nombre: "Invernadero 1", estado: "activo" },
-    { id: 2, nombre: "Invernadero 2", estado: "inactivo" },
-    { id: 3, nombre: "Invernadero 3", estado: "activo" },
-  ];
-
-  const zonasPorInvernadero = {
-    1: [
-      { id: 1, nombre: "Zona A" },
-      { id: 2, nombre: "Zona B" },
-    ],
-    3: [{ id: 3, nombre: "Zona X" }],
-  };
+  const [cultivos, setCultivos] = useState<any[]>([]);
+  const [imagenFile, setImagenFile] = useState<File | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
 
   const [form, setForm] = useState({
     nombre_cultivo: "",
@@ -47,39 +24,101 @@ export default function CultivosPage() {
     temp_max: "",
     humedad_min: "",
     humedad_max: "",
-    id_zona: "",
-    id_invernadero: "",
     fecha_inicio: "",
     fecha_fin: "",
-    imagen: "",
   });
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
+  useEffect(() => {
+    axios.get("http://localhost:4000/api/cultivos").then((res) => setCultivos(res.data));
+  }, []);
 
-  const agregarCultivo = () => {
-    if (
-      !form.nombre_cultivo ||
-      !form.descripcion ||
-      !form.temp_min ||
-      !form.temp_max ||
-      !form.humedad_min ||
-      !form.humedad_max ||
-      !form.id_zona ||
-      !form.id_invernadero ||
-      !form.fecha_inicio
-    ) {
-      alert("Completa todos los campos obligatorios.");
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const menu = document.querySelector(".menu-opciones");
+      if (menu && !menu.contains(target)) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const abrirModalParaEditar = (cultivo: any) => {
+    setForm({
+      nombre_cultivo: cultivo.nombre_cultivo,
+      descripcion: cultivo.descripcion,
+      temp_min: cultivo.temp_min,
+      temp_max: cultivo.temp_max,
+      humedad_min: cultivo.humedad_min,
+      humedad_max: cultivo.humedad_max,
+      fecha_inicio: cultivo.fecha_inicio.slice(0, 10),
+      fecha_fin: cultivo.fecha_fin ? cultivo.fecha_fin.slice(0, 10) : "",
+    });
+    setImagenFile(null);
+    setEditandoId(cultivo.id_cultivo);
+    setModalOpen(true);
+  };
+
+  const agregarCultivo = async () => {
+  if (
+    !form.nombre_cultivo ||
+    !form.descripcion ||
+    !form.temp_min ||
+    !form.temp_max ||
+    !form.humedad_min ||
+    !form.humedad_max ||
+    !form.fecha_inicio
+  ) {
+    alert("Completa todos los campos obligatorios.");
+    return;
+  }
+
+  let urlImagen = "";
+
+  // Si hay nueva imagen, subirla
+  if (imagenFile) {
+    const formData = new FormData();
+    formData.append("imagen", imagenFile);
+    try {
+      const res = await axios.post("http://localhost:4000/api/imagen/imagen-cultivo", formData);
+      urlImagen = res.data.url;
+    } catch (error) {
+      alert("❌ Error al subir imagen.");
       return;
     }
+  }
 
-    const nuevo = {
-      id: Date.now(),
-      ...form,
-      estado: "activo",
-    };
+  // construir el payload
+  const payload: any = {
+    ...form,
+    temp_min: Number(form.temp_min),
+    temp_max: Number(form.temp_max),
+    humedad_min: Number(form.humedad_min),
+    humedad_max: Number(form.humedad_max),
+    fecha_fin: form.fecha_fin || null,
+    estado: "activo",
+  };
 
-    setCultivos([...cultivos, nuevo]);
+  // solo agregar imagen si hay una nueva
+  if (urlImagen) {
+    payload.imagenes = urlImagen;
+  }
+
+  try {
+    if (editandoId) {
+      await axios.put(`http://localhost:4000/api/cultivos/${editandoId}`, payload);
+      const actualizados = await axios.get("http://localhost:4000/api/cultivos");
+      setCultivos(actualizados.data);
+    } else {
+      const res = await axios.post("http://localhost:4000/api/cultivos", {
+        ...payload,
+        imagenes: urlImagen, // en creación sí se necesita enviar imagen, así sea vacía
+      });
+      setCultivos((prev) => [...prev, res.data.cultivo]);
+    }
+
+    // Reset
     setForm({
       nombre_cultivo: "",
       descripcion: "",
@@ -87,268 +126,177 @@ export default function CultivosPage() {
       temp_max: "",
       humedad_min: "",
       humedad_max: "",
-      id_zona: "",
-      id_invernadero: "",
       fecha_inicio: "",
       fecha_fin: "",
-      imagen: "",
     });
+    setImagenFile(null);
     setModalOpen(false);
-  };
+    setEditandoId(null);
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error al guardar el cultivo.");
+  }
+};
 
-  const cambiarEstado = (id: number, nuevo: string) => {
-    if (confirm("¿Estás seguro de cambiar el estado del cultivo?")) {
-      setCultivos((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, estado: nuevo } : c))
-      );
-      setMenuOpenId(null);
+
+  const eliminarCultivo = async (id: number) => {
+    if (confirm("¿Eliminar cultivo permanentemente?")) {
+      try {
+        await axios.delete(`http://localhost:4000/api/cultivos/${id}`);
+        setCultivos(prev => prev.filter(c => c.id_cultivo !== id));
+        setMenuOpenId(null);
+      } catch {
+        alert("Error al eliminar cultivo.");
+      }
     }
   };
 
-  const zonasDisponibles = zonasPorInvernadero[form.id_invernadero] || [];
+  const cambiarEstado = (id: number, nuevo: string) => {
+    if (confirm("¿Cambiar estado del cultivo?")) {
+      axios.patch(`http://localhost:4000/api/cultivos/${id}/estado/${nuevo}`)
+        .then(() => {
+          setCultivos(prev => prev.map(c => c.id_cultivo === id ? { ...c, estado: nuevo } : c));
+          setMenuOpenId(null);
+        })
+        .catch(() => alert("Error al cambiar el estado."));
+    }
+  };
 
-  const cultivosFiltrados = cultivos.filter((c) =>
-    c.nombre_cultivo.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const cultivosFiltrados = cultivos.filter(c => c.nombre_cultivo.toLowerCase().includes(busqueda.toLowerCase()));
 
   return (
-    <main className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold text-green-800 mb-4">
-        Gestión de Cultivos
-      </h1>
+  <main className="p-6 bg-gray-50 min-h-screen">
+    <div className="flex justify-between items-center mb-6">
+      <h1 className="text-4xl font-bold text-green-800">Cultivos</h1>
+      <button
+        onClick={() => {
+          setModalOpen(true);
+          setEditandoId(null);
+        }}
+        className="bg-green-600 text-white px-5 py-2 rounded-full hover:bg-green-700 transition"
+      >
+        + Crear
+      </button>
+    </div>
 
-      {/* Buscador */}
-      <div className="mb-6 flex items-center gap-2">
-        <MagnifyingGlassIcon className="w-5 h-5 text-gray-600" />
-        <input
-          placeholder="Buscar cultivo..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full md:max-w-sm border border-gray-300 rounded-md px-3 py-2"
-        />
-      </div>
+    <div className="mb-6 flex items-center gap-2">
+      <MagnifyingGlassIcon className="w-5 h-5 text-gray-600" />
+      <input
+        placeholder="Buscar cultivo..."
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        className="w-full md:max-w-sm border border-gray-300 rounded-md px-3 py-2"
+      />
+    </div>
 
-      {/* Lista de cultivos */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {cultivosFiltrados.map((c) => (
-          <div
-            key={c.id}
-            className="bg-white p-5 rounded-xl shadow-md relative flex flex-col gap-2"
-          >
-            <div className="flex justify-between items-start">
-              <h2 className="text-lg font-bold text-green-700">
-                {c.nombre_cultivo}
-              </h2>
-              <div className="relative">
-                <button
-                  onClick={() =>
-                    setMenuOpenId((prev) => (prev === c.id ? null : c.id))
-                  }
-                >
-                  <EllipsisVerticalIcon className="w-5 h-5 text-gray-600" />
-                </button>
-                {menuOpenId === c.id && (
-                  <div className="absolute right-0 mt-2 bg-white border shadow rounded-md z-50">
-                    <button
-                      onClick={() => cambiarEstado(c.id, "activo")}
-                      className="block w-full px-4 py-2 text-left hover:bg-gray-100"
-                    >
-                      Activar
-                    </button>
-                    <button
-                      onClick={() => cambiarEstado(c.id, "inactivo")}
-                      className="block w-full px-4 py-2 text-left hover:bg-gray-100"
-                    >
-                      Inactivar
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-            {c.imagen && (
-              <img
-                src={c.imagen}
-                alt="Cultivo"
-                className="w-full h-40 object-cover rounded-md"
-              />
-            )}
-            <p className="text-sm text-gray-500">{c.descripcion}</p>
-            <p className="text-sm">🌡️ {c.temp_min}°C - {c.temp_max}°C</p>
-            <p className="text-sm">💧 {c.humedad_min}% - {c.humedad_max}%</p>
-            <p className="text-sm">Zona: {c.id_zona}</p>
-            <p className="text-sm">Invernadero: {c.id_invernadero}</p>
-            <p className="text-sm">Inicio: {c.fecha_inicio}</p>
-            <p className="text-sm">Fin: {c.fecha_fin || "—"}</p>
-            <p className="text-sm font-semibold">Estado: {c.estado}</p>
-            <div className="flex gap-2 mt-3">
-              <button className="bg-green-500 text-white px-3 py-1 rounded-md text-sm">
-                Iniciar
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {cultivosFiltrados.map((c) => (
+        <div
+          key={c.id_cultivo}
+          className="bg-white p-4 rounded-xl shadow-md border border-gray-200 relative hover:shadow-lg transition duration-300"
+        >
+          <div className="flex justify-between items-start mb-2">
+            <h2 className="text-lg font-bold text-green-700">{c.nombre_cultivo}</h2>
+            <div className="relative flex items-center gap-1">
+              <button
+                onClick={() => abrirModalParaEditar(c)}
+                className="text-green-600 hover:text-green-800 p-1 rounded-full"
+                title="Editar"
+              >
+                <PencilIcon className="w-5 h-5" />
               </button>
-              <button className="bg-red-500 text-white px-3 py-1 rounded-md text-sm">
-                Finalizar
+              <button
+                onClick={() =>
+                  setMenuOpenId((prev) => (prev === c.id_cultivo ? null : c.id_cultivo))
+                }
+                className="hover:bg-gray-100 p-1 rounded-full"
+                title="Opciones"
+              >
+                <EllipsisVerticalIcon className="w-5 h-5 text-gray-600" />
               </button>
+
+              {menuOpenId === c.id_cultivo && (
+                <div className="menu-opciones absolute right-0 top-8 bg-white border shadow-md rounded-md z-50 w-44">
+                  <button
+                    onClick={() => cambiarEstado(c.id_cultivo, "activo")}
+                    className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                  >
+                    Activar
+                  </button>
+                  <button
+                    onClick={() => cambiarEstado(c.id_cultivo, "finalizado")}
+                    className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                  >
+                    Finalizar
+                  </button>
+                  <button
+                    onClick={() => eliminarCultivo(c.id_cultivo)}
+                    className="flex items-center gap-2 w-full px-4 py-2 text-left text-red-600 hover:bg-red-50"
+                  >
+                    <TrashIcon className="w-4 h-4" /> Eliminar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Botón */}
-      <div className="mt-10 flex justify-center">
-        <button
-          onClick={() => setModalOpen(true)}
-          className="bg-green-600 text-white px-6 py-3 font-bold rounded-full"
-        >
-          Crear Cultivo
-        </button>
-      </div>
+  <div className="overflow-hidden rounded-xl mb-3 shadow-sm">
+  {c.imagenes ? (
+    <img
+      src={c.imagenes}
+      alt="Cultivo"
+      className="w-full h-36 object-cover rounded-xl transition-transform duration-300 ease-in-out group-hover:scale-105 group-hover:brightness-105"
+    />
+  ) : (
+    <div className="w-full h-36 bg-gray-100 flex items-center justify-center text-gray-400 text-sm italic rounded-xl">
+      Sin imagen
+    </div>
+  )}
+</div>
 
-      {/* Modal */}
+
+
+
+
+
+          <p className="text-sm text-gray-600 line-clamp-3 mb-2">
+            {c.descripcion}
+          </p>
+          <div className="text-sm text-gray-700 space-y-1">
+            <p>🌡️ {c.temp_min}°C - {c.temp_max}°C</p>
+            <p>💧 {c.humedad_min}% - {c.humedad_max}%</p>
+            <p>🗓️ {new Date(c.fecha_inicio).toLocaleDateString()} - {c.fecha_fin ? new Date(c.fecha_fin).toLocaleDateString() : "—"}</p>
+            <p> <span className={`font-semibold ${c.estado === "activo" ? "text-green-600" : "text-gray-500"}`}>{c.estado.toUpperCase()}</span></p>
+          </div>
+        </div>
+      ))}
+    </div>
+
       {modalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-xl">
-            <h2 className="text-xl font-bold mb-4">Nuevo Cultivo</h2>
-
+          <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4 text-green-700"> {editandoId ? "Editar" : "Nuevo"} Cultivo</h2>
             <div className="space-y-3">
-              <input
-                placeholder="Nombre del cultivo"
-                value={form.nombre_cultivo}
-                onChange={(e) =>
-                  setForm({ ...form, nombre_cultivo: e.target.value })
-                }
-                className="w-full border px-3 py-2 rounded"
-              />
-              <textarea
-                placeholder="Descripción"
-                value={form.descripcion}
-                onChange={(e) =>
-                  setForm({ ...form, descripcion: e.target.value })
-                }
-                className="w-full border px-3 py-2 rounded"
-              />
+              <input placeholder="Nombre del cultivo" value={form.nombre_cultivo} onChange={(e) => setForm({ ...form, nombre_cultivo: e.target.value })} className="w-full border px-3 py-2 rounded" />
+              <textarea placeholder="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} className="w-full border px-3 py-2 rounded" />
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  placeholder="Temperatura mín"
-                  value={form.temp_min}
-                  onChange={(e) =>
-                    setForm({ ...form, temp_min: e.target.value })
-                  }
-                  className="border px-3 py-2 rounded"
-                />
-                <input
-                  type="number"
-                  placeholder="Temperatura máx"
-                  value={form.temp_max}
-                  onChange={(e) =>
-                    setForm({ ...form, temp_max: e.target.value })
-                  }
-                  className="border px-3 py-2 rounded"
-                />
+                <input type="number" placeholder="Temp mín" value={form.temp_min} onChange={(e) => setForm({ ...form, temp_min: e.target.value })} className="border px-3 py-2 rounded" />
+                <input type="number" placeholder="Temp máx" value={form.temp_max} onChange={(e) => setForm({ ...form, temp_max: e.target.value })} className="border px-3 py-2 rounded" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  placeholder="Humedad mín"
-                  value={form.humedad_min}
-                  onChange={(e) =>
-                    setForm({ ...form, humedad_min: e.target.value })
-                  }
-                  className="border px-3 py-2 rounded"
-                />
-                <input
-                  type="number"
-                  placeholder="Humedad máx"
-                  value={form.humedad_max}
-                  onChange={(e) =>
-                    setForm({ ...form, humedad_max: e.target.value })
-                  }
-                  className="border px-3 py-2 rounded"
-                />
+                <input type="number" placeholder="Humedad mín" value={form.humedad_min} onChange={(e) => setForm({ ...form, humedad_min: e.target.value })} className="border px-3 py-2 rounded" />
+                <input type="number" placeholder="Humedad máx" value={form.humedad_max} onChange={(e) => setForm({ ...form, humedad_max: e.target.value })} className="border px-3 py-2 rounded" />
               </div>
-              <select
-                value={form.id_invernadero}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    id_invernadero: parseInt(e.target.value),
-                    id_zona: "",
-                  })
-                }
-                className="w-full border px-3 py-2 rounded"
-              >
-                <option value="">Seleccione un invernadero</option>
-                {invernaderos
-                  .filter((inv) => inv.estado === "activo")
-                  .map((inv) => (
-                    <option key={inv.id} value={inv.id}>
-                      {inv.nombre}
-                    </option>
-                  ))}
-              </select>
-              <select
-                value={form.id_zona}
-                onChange={(e) =>
-                  setForm({ ...form, id_zona: parseInt(e.target.value) })
-                }
-                className="w-full border px-3 py-2 rounded"
-              >
-                <option value="">Seleccione una zona</option>
-                {zonasDisponibles.map((z) => (
-                  <option key={z.id} value={z.id}>
-                    {z.nombre}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="date"
-                value={form.fecha_inicio}
-                onChange={(e) =>
-                  setForm({ ...form, fecha_inicio: e.target.value })
-                }
-                className="w-full border px-3 py-2 rounded"
-              />
-              <input
-                type="date"
-                value={form.fecha_fin}
-                onChange={(e) =>
-                  setForm({ ...form, fecha_fin: e.target.value })
-                }
-                className="w-full border px-3 py-2 rounded"
-              />
+              <input type="date" value={form.fecha_inicio} onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })} className="w-full border px-3 py-2 rounded" />
+              <input type="date" value={form.fecha_fin} onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })} className="w-full border px-3 py-2 rounded" />
               <div>
-                <label className="block text-sm text-gray-600 mb-1">
-                  Imagen del cultivo
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = () =>
-                        setForm({ ...form, imagen: reader.result as string });
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="w-full"
-                />
+                <label className="block text-sm text-gray-600 mb-1">Imagen</label>
+                <input type="file" accept="image/*" onChange={(e) => setImagenFile(e.target.files?.[0] || null)} className="w-full" />
               </div>
             </div>
-
             <div className="flex justify-end gap-2 mt-5">
-              <button
-                onClick={() => setModalOpen(false)}
-                className="bg-gray-400 text-white px-4 py-2 rounded"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={agregarCultivo}
-                className="bg-green-600 text-white px-4 py-2 rounded"
-              >
-                Crear Cultivo
-              </button>
+              <button onClick={() => setModalOpen(false)} className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded">Cancelar</button>
+              <button onClick={agregarCultivo} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">{editandoId ? "Guardar Cambios" : "Crear"}</button>
             </div>
           </div>
         </div>
