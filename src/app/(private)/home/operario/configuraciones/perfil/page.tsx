@@ -1,161 +1,258 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
 
-interface Persona {
-  id_persona: number;
-  nombre_usuario: string;
-  correo: string;
-  contrasena: string;
-  rol: "admin" | "operario" | "superadmin";
-  estado: "activo" | "inactivo";
-  autenticado: boolean;
-  created_at: string;
-  updated_at: string;
-  foto?: string;
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import api from "@/app/services/api"; // Asegúrate de que esta ruta sea correcta
+import { useRouter } from 'next/navigation'; // Importa useRouter
+
+// --- INTERFACES UNIFICADAS CON EL BACKEND ---
+interface Perfil {
+    id_persona: number;
+    nombre_usuario: string;
+    correo: string;
+    rol: "admin" | "operario";
+    estado: "activo" | "inactivo" | "mantenimiento";
+    isVerified: boolean;
+    foto_url?: string;
+    createdAt: string;
+    updatedAt: string;
+    perfil?: {
+        foto_url?: string;
+    };
 }
 
+// --- COMPONENTES DE MODALES PERSONALIZADOS ---
+const buttonBaseClasses = "px-6 py-2 rounded-full text-base font-semibold transition transform duration-200 ease-in-out shadow-md bg-green-600 hover:bg-green-700 text-white";
+
+type AlertDialogProps = {
+    message: string;
+    onClose: () => void;
+};
+
+function CustomAlertDialog({ message, onClose }: AlertDialogProps) {
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-4">
+            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm text-center">
+                <p className="text-lg text-gray-800 mb-6">{message}</p>
+                <button
+                    onClick={onClose}
+                    className={buttonBaseClasses}
+                >
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// --- COMPONENTE PRINCIPAL DE PERFIL ---
+
 export default function PerfilPage() {
-  const [usuario, setUsuario] = useState<Persona | null>(null);
-  const [editForm, setEditForm] = useState({
-    nombre_usuario: "",
-    correo: "",
-    contrasena: "",
-  });
-  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
-  const [fotoArchivo, setFotoArchivo] = useState<File | null>(null);
+    const [perfil, setPerfil] = useState<Perfil | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState({
+        nombre_usuario: "",
+        correo: "",
+        contrasena: "",
+    });
+    const [fotoArchivo, setFotoArchivo] = useState<File | null>(null);
 
-  useEffect(() => {
-    // Simula datos desde backend
-    const data: Persona = {
-      id_persona: 1,
-      nombre_usuario: "juliansamboni",
-      correo: "julian@hortitech.com",
-      contrasena: "",
-      rol: "admin",
-      estado: "activo",
-      autenticado: true,
-      created_at: "2025-05-01T12:00:00Z",
-      updated_at: "2025-06-01T18:30:00Z",
-      foto: "/images/default-avatar.png", // imagen inicial
+    const [alertMessage, setAlertMessage] = useState<string | null>(null);
+    const router = useRouter(); // Inicializa el router
+
+    useEffect(() => {
+        fetchPerfil();
+    }, []);
+
+    const fetchPerfil = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const token = localStorage.getItem('token');
+            console.log('DEBUG (Frontend - Operario): Token en localStorage al cargar perfil:', token ? token.substring(0, 30) + '...' : 'No token');
+
+            const response = await api.get('/perfil');
+            const fetchedPerfil: Perfil = response.data;
+
+            const fotoUrl = fetchedPerfil.perfil?.foto_url || fetchedPerfil.foto_url || "/images/default-avatar.png";
+
+            setPerfil({ ...fetchedPerfil, foto_url: fotoUrl });
+            setEditForm({
+                nombre_usuario: fetchedPerfil.nombre_usuario,
+                correo: fetchedPerfil.correo,
+                contrasena: "",
+            });
+        } catch (err: any) {
+            console.error("Error al cargar perfil (Operario):", err.response?.data || err.message);
+            setError(err.response?.data?.error || "Error al cargar el perfil.");
+        } finally {
+            setLoading(false);
+        }
     };
-    setUsuario(data);
-    setEditForm({
-      nombre_usuario: data.nombre_usuario,
-      correo: data.correo,
-      contrasena: "",
-    });
-    setFotoPreview(data.foto || null);
-  }, []);
 
-  const handleGuardar = () => {
-    if (!editForm.nombre_usuario || !editForm.correo) {
-      alert("Nombre y correo son obligatorios.");
-      return;
-    }
+    const handleGuardar = async () => {
+        if (!perfil) return;
+        setLoading(true);
+        setError(null);
 
-    // Aquí iría la lógica para enviar la imagen y datos al backend
-    console.log("Guardando cambios:", {
-      ...editForm,
-      foto: fotoArchivo,
-    });
+        try {
+            const { nombre_usuario, correo, contrasena } = editForm;
 
-    alert("Cambios guardados correctamente.");
-  };
+            const updateData: { nombre_usuario?: string; correo?: string; contrasena?: string } = {};
+            if (nombre_usuario !== perfil.nombre_usuario) updateData.nombre_usuario = nombre_usuario;
+            if (correo !== perfil.correo) updateData.correo = correo;
+            if (contrasena) updateData.contrasena = contrasena;
 
-  const handleImagenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFotoArchivo(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setFotoPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+            await api.put("/perfil/update", updateData);
 
-  if (!usuario) return <p className="text-center mt-10">Cargando perfil...</p>;
+            if (fotoArchivo && perfil.id_persona) {
+                const formData = new FormData();
+                formData.append('profile_picture', fotoArchivo);
 
-  return (
-    <main className="max-w-3xl mx-auto py-10 px-6 bg-gray-50 min-h-screen">
-      <h1 className="text-4xl font-bold text-darkGreen-900 mb-8 text-center md:text-left">
-        Mi Perfil
-      </h1>
+                await api.post(`/users/${perfil.id_persona}/upload-photo`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+            }
 
-      <div className="bg-white rounded-3xl shadow p-8 space-y-6">
-        {/* Imagen de perfil */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-green-500 shadow">
-            {fotoPreview ? (
-              <Image
-                src={fotoPreview}
-                alt="Foto de perfil"
-                width={128}
-                height={128}
-                className="object-cover w-full h-full"
-              />
-            ) : (
-              <div className="bg-gray-200 w-full h-full" />
-            )}
-          </div>
-          <label className="text-sm text-green-700 font-medium cursor-pointer hover:underline">
-            Cambiar Foto
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImagenChange}
-            />
-          </label>
-        </div>
+            await fetchPerfil(); // Recargar el perfil para mostrar la nueva foto si aplica
+            setAlertMessage("Perfil actualizado correctamente.");
+            setEditForm({ ...editForm, contrasena: "" });
+            setFotoArchivo(null);
 
-        {/* Datos del perfil */}
-        <div>
-          <label className="text-sm font-medium text-gray-600">Nombre de Usuario</label>
-          <input
-            className="w-full mt-1 border border-gray-300 p-3 rounded-md"
-            value={editForm.nombre_usuario}
-            onChange={(e) => setEditForm({ ...editForm, nombre_usuario: e.target.value })}
-          />
-        </div>
+            // Redirige al menú principal del operario después de un breve retraso
+            setTimeout(() => {
+                router.push('/home/operario'); // Ajusta esta ruta si tu menú principal de operario es diferente
+            }, 1500); // Redirige después de 1.5 segundos para que el usuario vea el mensaje de éxito
 
-        <div>
-          <label className="text-sm font-medium text-gray-600">Correo Electrónico</label>
-          <input
-            type="email"
-            className="w-full mt-1 border border-gray-300 p-3 rounded-md"
-            value={editForm.correo}
-            onChange={(e) => setEditForm({ ...editForm, correo: e.target.value })}
-          />
-        </div>
+        } catch (err: any) {
+            console.error("Error al actualizar perfil (Operario):", err.response?.data || err.message);
+            setError(err.response?.data?.error || "Hubo un error al guardar los cambios.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        <div>
-          <label className="text-sm font-medium text-gray-600">Contraseña Nueva</label>
-          <input
-            type="password"
-            placeholder="••••••••••"
-            className="w-full mt-1 border border-gray-300 p-3 rounded-md"
-            value={editForm.contrasena}
-            onChange={(e) => setEditForm({ ...editForm, contrasena: e.target.value })}
-          />
-          <p className="text-xs text-gray-400 mt-1">Déjalo vacío si no deseas cambiarla.</p>
-        </div>
+    const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setFotoArchivo(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPerfil(prev => prev ? { ...prev, foto_url: reader.result as string } : null);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
-        <div className="grid grid-cols-2 gap-4 text-sm text-gray-700 pt-4 border-t border-gray-100">
-          <p><strong>Rol:</strong> {usuario.rol}</p>
-          <p><strong>Estado:</strong> {usuario.estado}</p>
-          <p><strong>Autenticado:</strong> {usuario.autenticado ? "Sí" : "No"}</p>
-          <p><strong>Creado en:</strong> {new Date(usuario.created_at).toLocaleString()}</p>
-        </div>
+    if (loading) return <p className="text-center mt-10 text-gray-600">Cargando perfil...</p>;
+    if (error) return <p className="text-center mt-10 text-red-500">Error: {error}</p>;
+    if (!perfil) return <p className="text-center mt-10 text-gray-600">No se pudo cargar el perfil.</p>;
 
-        <div className="flex justify-end pt-6">
-          <button
-            onClick={handleGuardar}
-            className="bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-2 rounded-full transition"
-          >
-            Guardar Cambios
-          </button>
-        </div>
-      </div>
-    </main>
-  );
+    return (
+        <main className="max-w-3xl mx-auto py-10 px-6 bg-gray-50 min-h-screen font-sans">
+            <h1 className="text-4xl font-bold text-green-800 mb-8 text-center md:text-left">
+                Mi Perfil (Operario)
+            </h1>
+
+            <div className="bg-white rounded-3xl shadow-xl p-8 space-y-6 border border-gray-200">
+                {/* Imagen de perfil */}
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-green-500 shadow-md">
+                        <Image
+                            src={perfil.foto_url || "/images/default-avatar.png"}
+                            alt="Foto de perfil"
+                            width={128}
+                            height={128}
+                            className="object-cover w-full h-full"
+                        />
+                    </div>
+                    {/* Input para cambiar foto */}
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFotoChange}
+                        className="w-full max-w-xs text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition"
+                    />
+                </div>
+
+                {/* Formulario */}
+                <div>
+                    <label htmlFor="nombre_usuario" className="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario</label>
+                    <input
+                        id="nombre_usuario"
+                        className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition"
+                        value={editForm.nombre_usuario}
+                        onChange={(e) =>
+                            setEditForm({ ...editForm, nombre_usuario: e.target.value })
+                        }
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="correo" className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+                    <input
+                        id="correo"
+                        type="email"
+                        className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition"
+                        value={editForm.correo}
+                        onChange={(e) =>
+                            setEditForm({ ...editForm, correo: e.target.value })
+                        }
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="contrasena" className="block text-sm font-medium text-gray-700 mb-1">Nueva Contraseña</label>
+                    <input
+                        id="contrasena"
+                        type="password"
+                        placeholder="••••••••••"
+                        className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition"
+                        value={editForm.contrasena}
+                        onChange={(e) =>
+                            setEditForm({ ...editForm, contrasena: e.target.value })
+                        }
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Déjalo vacío si no deseas cambiarla.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-base text-gray-700 pt-4 border-t border-gray-100">
+                    <p>
+                        <strong>Rol:</strong> <span className="capitalize text-green-800 font-medium">{perfil.rol}</span>
+                    </p>
+                    <p>
+                        <strong>Estado:</strong> <span className={`capitalize font-medium ${perfil.estado === 'activo' ? 'text-green-600' : perfil.estado === 'inactivo' ? 'text-orange-500' : 'text-red-600'}`}>
+                            {perfil.estado === 'mantenimiento' ? 'Bloqueado' : perfil.estado}
+                        </span>
+                    </p>
+                    <p>
+                        <strong>Verificado:</strong> <span className={`font-medium ${perfil.isVerified ? 'text-green-600' : 'text-red-500'}`}>{perfil.isVerified ? "Sí" : "No"}</span>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                        <strong>Creado en:</strong>{" "}
+                        {new Date(perfil.createdAt).toLocaleString("es-CO", {
+                            dateStyle: "short",
+                            timeStyle: "medium",
+                        })}
+                    </p>
+                </div>
+
+                <div className="flex justify-end pt-6">
+                    <button
+                        onClick={handleGuardar}
+                        className={buttonBaseClasses}
+                    >
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+
+            {alertMessage && <CustomAlertDialog message={alertMessage} onClose={() => setAlertMessage(null)} />}
+        </main>
+    );
 }
