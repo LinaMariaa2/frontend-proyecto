@@ -1,4 +1,5 @@
 "use client";
+
 import Link from "next/link";
 import {
   HomeIcon,
@@ -8,13 +9,29 @@ import {
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function OperarioLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const navItems = [
-    { name: "Invernaderos", href: "/home/operario/invernaderos", icon: HomeIcon },
+    {
+      name: "Invernaderos",
+      href: "/home/operario/invernaderos",
+      icon: HomeIcon,
+    },
     { name: "Cultivos", href: "/home/operario/cultivos", icon: SunIcon },
-    { name: "Estadísticas", href: "/home/operario/estadisticas", icon: ChartBarIcon },
+    {
+      name: "Estadísticas",
+      href: "/home/operario/estadisticas",
+      icon: ChartBarIcon,
+    },
     { name: "Bitácora", href: "/home/operario/bitacora", icon: CalendarDaysIcon },
-    { name: "Configuraciones", href: "/home/operario/configuraciones", icon: Cog6ToothIcon },
+    {
+      name: "Configuraciones",
+      href: "/home/operario/configuraciones",
+      icon: Cog6ToothIcon,
+    },
   ];
 
   return (
