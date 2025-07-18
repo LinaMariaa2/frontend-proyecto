@@ -42,15 +42,16 @@ export default function ArchivadasPage() {
   }, []);
 
   const desarchivar = async (id: number) => {
-    try {
-      await axios.patch(`http://localhost:4000/api/bitacora/${id}/desarchivar`);
-      const res = await axios.get("http://localhost:4000/api/bitacora?archivadas=true");
-      setPublicaciones(res.data);
-    } catch (err) {
-      console.error("Error al desarchivar", err);
-      alert("No se pudo desarchivar");
-    }
-  };
+  try {
+    await axios.patch(`http://localhost:4000/api/bitacora/${id}/desarchivar`);
+   
+    setPublicaciones((prev) => prev.filter((pub) => pub.id_publicacion !== id));
+  } catch (err) {
+    console.error("Error al desarchivar", err);
+    alert("No se pudo desarchivar");
+  }
+};
+
 
   return (
     <main className="w-full px-6 md:px-12 lg:px-20 xl:px-32 mx-auto mt-10">
