@@ -172,7 +172,8 @@ export default function RegistroUsuario() {
     };
 
     return (
-        <main className="min-h-screen flex items-center justify-center bg-green-50 p-4">
+        <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
+
             <div className="bg-white shadow-xl rounded-xl p-8 w-full max-w-xl space-y-6">
                 <h1 className="text-3xl font-bold text-green-800 text-center">Registro de Usuario</h1>
 

@@ -221,7 +221,7 @@ export default function ZonasPage() {
   const zonasActivas = zonas.filter((z) => z.estado === "activo").length;
 
  return (
-  <main className="p-6 bg-gray-50 min-h-screen">
+  <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
     <h1 className="text-3xl font-bold text-green-800 mb-4">
       Zonas del Invernadero #{id_invernadero}
     </h1>

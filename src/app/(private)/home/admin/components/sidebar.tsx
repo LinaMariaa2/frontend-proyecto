@@ -2,15 +2,28 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Moon, Sun, Settings, LogOut, User } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Moon,
+  Sun,
+  Settings,
+  LogOut,
+  User,
+  Leaf,
+  BarChart2,
+  BookText,
+  Home,
+} from 'lucide-react';
 
 const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
   const toggleProfileMenu = () => setShowProfileMenu(!showProfileMenu);
+
   const toggleDark = () => {
     const newDark = !isDark;
     setIsDark(newDark);
@@ -18,7 +31,6 @@ const Sidebar = () => {
     localStorage.setItem('theme', newDark ? 'dark' : 'light');
   };
 
-  // Cargar preferencia de tema al montar
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme');
     const prefersDark =
@@ -30,28 +42,29 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Encabezado superior */}
-      <header className="flex justify-between items-center px-4 py-3 bg-[#191c32] text-white fixed top-0 left-0 w-full z-50 shadow-md">
-        {/* Botón + Título */}
+      {/* Encabezado */}
+      <header className="flex justify-between items-center px-4 py-3 bg-gray-100 text-black fixed top-0 left-0 w-full z-40 shadow-md">
         <div className="flex items-center">
           <button onClick={toggleSidebar} className="mr-3 focus:outline-none">
-            {isOpen ? <X size={28} /> : <Menu size={28} />}
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
           <h1 className="text-xl font-bold">HortiTech</h1>
         </div>
 
-        {/* Perfil con dropdown */}
+        {/* Menú de perfil */}
         <div className="relative">
           <div onClick={toggleProfileMenu} className="flex items-center space-x-3 cursor-pointer">
             <img
               src="/img/user.jpg"
               alt="Perfil"
-              className="w-10 h-10 rounded-full border border-aqua"
+              className="w-10 h-10 rounded-full border border-gray-400"
             />
-            <div className="text-right hidden md:block">
-              <p className="font-semibold">Julian Samboni</p>
-              <p className="text-sm text-gray-400">Administrador</p>
-            </div>
+            {isOpen && (
+              <div className="text-right hidden md:block">
+                <p className="font-semibold">Julian Samboni</p>
+                <p className="text-sm text-gray-500">Administrador</p>
+              </div>
+            )}
           </div>
 
           {showProfileMenu && (
@@ -70,16 +83,16 @@ const Sidebar = () => {
                   {isDark ? 'Modo claro' : 'Modo oscuro'}
                 </li>
                 <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2">
-                  <User size={16} /> 
-                    <Link href="/home/admin/configuraciones/perfil" className="hover:text-aqua"> Ver perfil</Link>
+                  <User size={16} />
+                  <Link href="/home/admin/configuraciones/perfil">Ver perfil</Link>
                 </li>
                 <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2">
                   <Settings size={16} />
-                   <Link href="/home/admin/configuraciones" className="hover:text-aqua"> Configuracion</Link>
+                  <Link href="/home/admin/configuraciones">Configuración</Link>
                 </li>
                 <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 text-red-600">
-                  <LogOut size={16} /> 
-                  <Link href="/login" className="hover:text-aqua">  Cerrar sesión</Link>
+                  <LogOut size={16} />
+                  <Link href="/login">Cerrar sesión</Link>
                 </li>
               </ul>
             </div>
@@ -87,25 +100,63 @@ const Sidebar = () => {
         </div>
       </header>
 
-      {/* Sidebar lateral */}
+      {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-[#191c32] text-white w-60 pt-16 z-40 transition-transform duration-300 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        } flex flex-col`}
+        className={`fixed top-0 left-0 h-screen bg-gray-100 border-r border-gray-200 pt-16 transition-all duration-300 z-30 ${
+          isOpen ? 'w-60' : 'w-16'
+        }`}
       >
-        <nav className="flex flex-col p-4 space-y-4">
-          <Link href="/home/admin/invernaderos" className="hover:text-aqua">Invernaderos</Link>
-          <Link href="/home/admin/cultivos" className="hover:text-aqua">Cultivos</Link>
-          <Link href="/home/admin/bitacora" className="hover:text-aqua">Bitácora</Link>
-          <Link href="/home/admin/estadisticas" className="hover:text-aqua">Estadisticas</Link>
-          <Link href="/home/admin/configuracion" className="hover:text-aqua">Configuración</Link>
+        <nav className="flex flex-col space-y-2 px-2 py-4 text-gray-700">
+          {/* Invernaderos sin submenú */}
+          <Link
+            href="/home/admin/invernaderos"
+            className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-200 transition"
+          >
+            <Home size={20} />
+            {isOpen && <span>Invernaderos</span>}
+          </Link>
+
+          {/* Resto de enlaces */}
+          <Link
+            href="/home/admin/cultivos"
+            className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-200 transition"
+          >
+            <Leaf size={20} />
+            {isOpen && <span>Cultivos</span>}
+          </Link>
+          <Link
+            href="/home/admin/bitacora"
+            className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-200 transition"
+          >
+            <BookText size={20} />
+            {isOpen && <span>Bitácora</span>}
+          </Link>
+          <Link
+            href="/home/admin/estadisticas"
+            className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-200 transition"
+          >
+            <BarChart2 size={20} />
+            {isOpen && <span>Estadísticas</span>}
+          </Link>
+          <Link
+  href="/home/admin/configuraciones"
+  className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-200 transition"
+>
+  <Settings size={20} />
+  {isOpen && <span>Configuración</span>}
+</Link>
+
         </nav>
       </aside>
 
-      {/* Contenido principal */}
-      <div className={`transition-all duration-300 pt-16 ${isOpen ? 'ml-60' : 'ml-0'}`}>
-        {/* Aquí va el contenido de la página */}
-      </div>
+      {/* Contenido principal desplazado */}
+      <main
+        className={`pt-16 transition-all duration-300 ${
+          isOpen ? 'ml-60' : 'ml-16'
+        } p-4`}
+      >
+        {/* Aquí va tu contenido */}
+      </main>
     </>
   );
 };

@@ -208,7 +208,8 @@ export default function InvernaderosPage() {
 
   
   return (
-   <main className="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
+   <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
+
     
     <div className="flex justify-between items-center mb-10">
   <h1 className="text-4xl font-bold text-green-900">Invernaderos</h1>

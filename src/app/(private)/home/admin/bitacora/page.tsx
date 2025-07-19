@@ -265,7 +265,8 @@ await method(url, {
   };
 
   return (
-  <main className="w-full px-6 md:px-12 lg:px-20 xl:px-32 mx-auto mt-10">
+  <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
+
     <div className="flex justify-between items-center mb-6">
       <h1 className="text-3xl font-bold text-green-700">Bitácora</h1>
       <div className="flex gap-2">

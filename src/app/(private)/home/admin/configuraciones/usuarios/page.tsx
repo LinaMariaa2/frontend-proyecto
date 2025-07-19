@@ -365,7 +365,8 @@ export default function GestionUsuariosPage() {
     if (error && !loading) return <p className="text-center mt-10 text-red-500">Error: {error}</p>;
 
     return (
-        <main className="min-h-screen p-6 bg-gray-50 font-sans">
+        <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
+
             <h1 className="text-4xl font-bold text-green-800 mb-8 text-center">Gestión de Usuarios</h1>
 
             {usuarios.length === 0 && !loading && !error && (

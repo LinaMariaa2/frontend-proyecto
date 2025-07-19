@@ -43,7 +43,7 @@ const configuraciones = [
 
 export default function ConfiguracionesPage() {
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
+    <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
       <h1 className="text-4xl font-bold text-darkGreen-900 mb-8">Configuraciones</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {configuraciones.map((item) => (

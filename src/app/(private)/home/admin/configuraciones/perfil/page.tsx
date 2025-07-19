@@ -141,7 +141,8 @@ export default function PerfilPage() {
     if (!perfil) return <p className="text-center mt-10 text-gray-600">No se pudo cargar el perfil.</p>;
 
     return (
-        <main className="max-w-3xl mx-auto py-10 px-6 bg-gray-50 min-h-screen font-sans">
+        <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
+
             <h1 className="text-4xl font-bold text-green-800 mb-8 text-center md:text-left">
                 Mi Perfil (Admin)
             </h1>
