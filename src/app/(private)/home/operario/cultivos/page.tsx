@@ -1,27 +1,33 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import axios from "axios";
 
-export default function CultivosPage() {
+interface Cultivo {
+  id_cultivo: number;
+  nombre_cultivo: string;
+  descripcion: string;
+  temp_min: number;
+  temp_max: number;
+  humedad_min: number;
+  humedad_max: number;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  estado: string;
+  imagenes?: string;
+}
+
+export default function CultivosOperario() {
   const [busqueda, setBusqueda] = useState("");
-  const [cultivos] = useState([
-    {
-      id: 1,
-      nombre_cultivo: "Tomate Cherry",
-      descripcion: "Cultivo experimental bajo luz artificial",
-      temp_min: 18.5,
-      temp_max: 28.0,
-      humedad_min: 50.0,
-      humedad_max: 80.0,
-      id_zona: 1,
-      id_invernadero: 1,
-      fecha_inicio: "2025-06-01",
-      fecha_fin: "2025-08-01",
-      estado: "activo",
-      imagen: "",
-    },
-  ]);
+  const [cultivos, setCultivos] = useState<Cultivo[]>([]);
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:4000/api/cultivos")
+      .then((res) => setCultivos(res.data))
+      .catch((err) => console.error("Error al obtener cultivos:", err));
+  }, []);
 
   const cultivosFiltrados = cultivos.filter((c) =>
     c.nombre_cultivo.toLowerCase().includes(busqueda.toLowerCase())
@@ -48,27 +54,39 @@ export default function CultivosPage() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {cultivosFiltrados.map((c) => (
           <div
-            key={c.id}
-            className="bg-white p-5 rounded-xl shadow-md relative flex flex-col gap-2"
+            key={c.id_cultivo}
+            className="bg-white p-5 rounded-xl shadow-md flex flex-col gap-2"
           >
             <h2 className="text-lg font-bold text-green-700">
               {c.nombre_cultivo}
             </h2>
-            {c.imagen && (
+
+            {c.imagenes ? (
               <img
-                src={c.imagen}
+                src={c.imagenes}
                 alt="Cultivo"
                 className="w-full h-40 object-cover rounded-md"
               />
+            ) : (
+              <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400 text-sm italic rounded-md">
+                Sin imagen
+              </div>
             )}
+
             <p className="text-sm text-gray-500">{c.descripcion}</p>
-            <p className="text-sm">🌡️ {c.temp_min}°C - {c.temp_max}°C</p>
-            <p className="text-sm">💧 {c.humedad_min}% - {c.humedad_max}%</p>
-            <p className="text-sm">Zona: {c.id_zona}</p>
-            <p className="text-sm">Invernadero: {c.id_invernadero}</p>
-            <p className="text-sm">Inicio: {c.fecha_inicio}</p>
-            <p className="text-sm">Fin: {c.fecha_fin || "—"}</p>
-            <p className="text-sm font-semibold uppercase">
+            <p className="text-sm">
+              🌡️ {c.temp_min}°C - {c.temp_max}°C
+            </p>
+            <p className="text-sm">
+              💧 {c.humedad_min}% - {c.humedad_max}%
+            </p>
+            <p className="text-sm">
+              🗓️ {new Date(c.fecha_inicio).toLocaleDateString()} -{" "}
+              {c.fecha_fin
+                ? new Date(c.fecha_fin).toLocaleDateString()
+                : "—"}
+            </p>
+            <p className="text-sm font-semibold uppercase text-green-600">
               Estado: {c.estado}
             </p>
           </div>

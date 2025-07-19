@@ -21,7 +21,20 @@ const Sidebar = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
+  // Leer el estado de la barra lateral desde localStorage
+  useEffect(() => {
+    const storedSidebarState = localStorage.getItem('sidebarOpen');
+    if (storedSidebarState !== null) {
+      setIsOpen(storedSidebarState === 'true');
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    const newState = !isOpen;
+    setIsOpen(newState);
+    localStorage.setItem('sidebarOpen', newState.toString());
+  };
+
   const toggleProfileMenu = () => setShowProfileMenu(!showProfileMenu);
 
   const toggleDark = () => {
@@ -31,6 +44,7 @@ const Sidebar = () => {
     localStorage.setItem('theme', newDark ? 'dark' : 'light');
   };
 
+  // Cargar tema al inicio
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme');
     const prefersDark =
@@ -107,7 +121,6 @@ const Sidebar = () => {
         }`}
       >
         <nav className="flex flex-col space-y-2 px-2 py-4 text-gray-700">
-          {/* Invernaderos sin submenú */}
           <Link
             href="/home/admin/invernaderos"
             className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-200 transition"
@@ -115,8 +128,6 @@ const Sidebar = () => {
             <Home size={20} />
             {isOpen && <span>Invernaderos</span>}
           </Link>
-
-          {/* Resto de enlaces */}
           <Link
             href="/home/admin/cultivos"
             className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-200 transition"
@@ -139,22 +150,17 @@ const Sidebar = () => {
             {isOpen && <span>Estadísticas</span>}
           </Link>
           <Link
-  href="/home/admin/configuraciones"
-  className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-200 transition"
->
-  <Settings size={20} />
-  {isOpen && <span>Configuración</span>}
-</Link>
-
+            href="/home/admin/configuraciones"
+            className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-200 transition"
+          >
+            <Settings size={20} />
+            {isOpen && <span>Configuración</span>}
+          </Link>
         </nav>
       </aside>
 
-      {/* Contenido principal desplazado */}
-      <main
-        className={`pt-16 transition-all duration-300 ${
-          isOpen ? 'ml-60' : 'ml-16'
-        } p-4`}
-      >
+      {/* Contenido principal */}
+      <main className={`pt-16 transition-all duration-300 ${isOpen ? 'ml-60' : 'ml-16'} p-4`}>
         {/* Aquí va tu contenido */}
       </main>
     </>
