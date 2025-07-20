@@ -1,4 +1,4 @@
-// src/app/(private)/home/admin/configuraciones/usuarios/page.tsx (Tu código actual, verificado)
+// src/app/(private)/home/admin/configuraciones/usuarios/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -39,6 +39,7 @@ interface CreateForm {
 
 // --- COMPONENTES DE MODALES PERSONALIZADOS ---
 const buttonBaseClasses = "px-4 py-2 rounded-full text-sm font-semibold transition transform duration-200 ease-in-out shadow-md bg-green-600 hover:bg-green-700 text-white";
+const iconButtonClasses = "p-1 rounded-full hover:bg-gray-200 transition duration-150 ease-in-out";
 
 type AlertDialogProps = {
     message: string;
@@ -162,10 +163,114 @@ function CreateUserModal({ form, setForm, onCancel, onConfirm, loading, error }:
     );
 }
 
+type EditUserModalProps = {
+    form: EditForm;
+    setForm: (value: EditForm) => void;
+    onCancel: () => void;
+    onConfirm: () => void;
+    handleImagenChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    loading: boolean;
+};
+
+function EditUserModal({ form, setForm, onCancel, onConfirm, handleImagenChange, loading }: EditUserModalProps) {
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-4">
+            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+                <h2 className="text-2xl font-bold text-green-700 mb-6 text-center">Editar Usuario</h2>
+
+                <div className="flex flex-col items-center mb-4">
+                    <Image
+                        src={form.foto || '/images/default-avatar.png'}
+                        alt="Foto de perfil"
+                        width={100}
+                        height={100}
+                        className="rounded-full border-2 border-green-400 object-cover shadow-sm mb-4"
+                    />
+                    <label htmlFor="upload-photo" className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-2 rounded-full transition duration-200">
+                        Cambiar Foto
+                        <input
+                            id="upload-photo"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImagenChange}
+                            className="hidden"
+                            disabled={loading}
+                        />
+                    </label>
+                </div>
+
+                <input
+                    placeholder="Nombre de usuario"
+                    value={form.nombre_usuario}
+                    onChange={(e) => setForm({ ...form, nombre_usuario: e.target.value })}
+                    className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-green-500 focus:border-green-500 transition"
+                    disabled={loading}
+                />
+                <input
+                    placeholder="Correo electrónico"
+                    value={form.correo}
+                    onChange={(e) => setForm({ ...form, correo: e.target.value })}
+                    className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-green-500 focus:border-green-500 transition"
+                    disabled={loading}
+                />
+                <select
+                    value={form.rol}
+                    onChange={(e) => setForm({ ...form, rol: e.target.value as "admin" | "operario" })}
+                    className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-green-500 focus:border-green-500 transition"
+                    disabled={loading}
+                >
+                    <option value="operario">Operario</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <select
+                    value={form.estado}
+                    onChange={(e) => setForm({ ...form, estado: e.target.value as "activo" | "inactivo" | "mantenimiento" })}
+                    className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-green-500 focus:border-green-500 transition"
+                    disabled={loading}
+                >
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                    <option value="mantenimiento">Bloqueado</option>
+                </select>
+                <div className="flex items-center justify-between mb-6">
+                    <label htmlFor="isVerified" className="text-gray-700 font-medium">Verificado:</label>
+                    <input
+                        id="isVerified"
+                        type="checkbox"
+                        checked={form.isVerified}
+                        onChange={(e) => setForm({ ...form, isVerified: e.target.checked })}
+                        className="h-5 w-5 text-green-600 rounded focus:ring-green-500"
+                        disabled={loading}
+                    />
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                    <button
+                        onClick={onCancel}
+                        className={buttonBaseClasses}
+                        disabled={loading}
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className={buttonBaseClasses}
+                        disabled={loading}
+                    >
+                        {loading ? 'Guardando...' : 'Guardar Cambios'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function GestionUsuariosPage() {
     const [usuarios, setUsuarios] = useState<Usuario[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [busqueda, setBusqueda] = useState('');
+    const [filtroActivo, setFiltroActivo] = useState('nombre_usuario'); // Default filter
 
     const [editarModalOpen, setEditarModalOpen] = useState(false);
     const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null);
@@ -179,7 +284,7 @@ export default function GestionUsuariosPage() {
     });
     const [createError, setCreateError] = useState('');
 
-    const [form, setForm] = useState<EditForm>({
+    const [editForm, setEditForm] = useState<EditForm>({
         nombre_usuario: "",
         correo: "",
         rol: "operario",
@@ -222,7 +327,7 @@ export default function GestionUsuariosPage() {
 
     const handleEditar = (usuario: Usuario) => {
         setUsuarioEditando(usuario);
-        setForm({
+        setEditForm({
             nombre_usuario: usuario.nombre_usuario,
             correo: usuario.correo,
             rol: usuario.rol,
@@ -241,11 +346,11 @@ export default function GestionUsuariosPage() {
 
         try {
             await api.put(`/users/${usuarioEditando.id_persona}`, {
-                nombre_usuario: form.nombre_usuario,
-                correo: form.correo,
-                rol: form.rol,
-                estado: form.estado,
-                isVerified: form.isVerified,
+                nombre_usuario: editForm.nombre_usuario,
+                correo: editForm.correo,
+                rol: editForm.rol,
+                estado: editForm.estado,
+                isVerified: editForm.isVerified,
             }, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -335,7 +440,7 @@ export default function GestionUsuariosPage() {
         if (file) {
             setFotoArchivo(file);
             const reader = new FileReader();
-            reader.onloadend = () => setForm({ ...form, foto: reader.result as string });
+            reader.onloadend = () => setEditForm({ ...editForm, foto: reader.result as string });
             reader.readAsDataURL(file);
         }
     };
@@ -361,90 +466,183 @@ export default function GestionUsuariosPage() {
         }
     };
 
+    const filteredUsuarios = usuarios.filter(usuario => {
+        const searchValue = busqueda.toLowerCase();
+        if (filtroActivo === 'nombre_usuario') {
+            return usuario.nombre_usuario.toLowerCase().includes(searchValue);
+        }
+        if (filtroActivo === 'correo') {
+            return usuario.correo.toLowerCase().includes(searchValue);
+        }
+        if (filtroActivo === 'rol') {
+            return usuario.rol.toLowerCase().includes(searchValue);
+        }
+        if (filtroActivo === 'estado') {
+            const estadoDisplay = usuario.estado === 'mantenimiento' ? 'bloqueado' : usuario.estado;
+            return estadoDisplay.toLowerCase().includes(searchValue);
+        }
+        return true;
+    });
+
     if (loading && usuarios.length === 0 && !error) return <p className="text-center mt-10 text-gray-600">Cargando usuarios...</p>;
     if (error && !loading) return <p className="text-center mt-10 text-red-500">Error: {error}</p>;
 
     return (
         <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
 
-            <h1 className="text-4xl font-bold text-green-800 mb-8 text-center">Gestión de Usuarios</h1>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold text-green-700">Gestión de Usuarios</h1>
+                <button
+                    onClick={() => setCreateModalOpen(true)}
+                    className="bg-green-600 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-700 transition duration-200"
+                >
+                    Crear Nuevo Usuario
+                </button>
+            </div>
 
-            {usuarios.length === 0 && !loading && !error && (
-                <p className="text-center text-gray-500 text-lg mt-10">No hay usuarios registrados.</p>
+            <div className="flex items-center gap-3 mb-6">
+                <div className="relative w-full">
+                    <input
+                        type="text"
+                        placeholder={`Buscar por ${filtroActivo === 'nombre_usuario' ? 'nombre de usuario' : filtroActivo === 'correo' ? 'correo' : filtroActivo === 'rol' ? 'rol' : 'estado'}`}
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                        className="w-full border border-gray-300 p-2 pl-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <svg
+                        className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 21l-4.35-4.35M16.65 9a7.65 7.65 0 11-15.3 0 7.65 7.65 0 0115.3 0z"
+                        />
+                    </svg>
+                </div>
+
+                <select
+                    value={filtroActivo}
+                    onChange={(e) => setFiltroActivo(e.target.value)}
+                    className="border border-gray-300 p-2 rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-500"
+                >
+                    <option value="nombre_usuario">Nombre de Usuario</option>
+                    <option value="correo">Correo</option>
+                    <option value="rol">Rol</option>
+                    <option value="estado">Estado</option>
+                </select>
+            </div>
+
+            {filteredUsuarios.length === 0 && !loading && !error && (
+                <p className="text-center text-gray-500 text-lg mt-10">No se encontraron usuarios con los filtros aplicados.</p>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {usuarios.map((usuario) => (
-                    <div key={usuario.id_persona} className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
-                        <div className="flex flex-col items-center gap-4 mb-4">
+            <div className="flex flex-col gap-3">
+                {filteredUsuarios.map((usuario) => (
+                    <div
+                        key={usuario.id_persona}
+                        className="bg-white shadow rounded-lg px-4 py-3 border-l-4 border-green-500 flex justify-between items-center transition-all duration-200 hover:shadow-md hover:border-green-600"
+                    >
+                        <div className="flex items-center gap-4">
                             <Image
                                 src={usuario.foto || '/images/default-avatar.png'}
                                 alt={`Foto de perfil de ${usuario.nombre_usuario}`}
-                                width={80}
-                                height={80}
-                                className="rounded-full border-2 border-green-400 object-cover shadow-sm"
+                                width={50}
+                                height={50}
+                                className="rounded-full object-cover border border-gray-200"
                             />
-                            <div className="text-center">
-                                <h2 className="text-2xl font-bold text-green-700 mb-1">{usuario.nombre_usuario}</h2>
+                            <div>
+                                <h3 className="text-lg font-bold text-green-800">{usuario.nombre_usuario}</h3>
                                 <p className="text-sm text-gray-600">{usuario.correo}</p>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 capitalize">
+                                        {usuario.rol}
+                                    </span>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                        usuario.estado === 'activo' ? 'bg-green-100 text-green-800' :
+                                        usuario.estado === 'inactivo' ? 'bg-orange-100 text-orange-800' :
+                                        'bg-red-100 text-red-800'
+                                    } capitalize`}>
+                                        {usuario.estado === 'mantenimiento' ? 'Bloqueado' : usuario.estado}
+                                    </span>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                        usuario.isVerified ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                                    }`}>
+                                        {usuario.isVerified ? "Verificado" : "No Verificado"}
+                                    </span>
+                                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                                        Creado: {new Date(usuario.createdAt).toLocaleDateString("es-CO", {
+                                            year: 'numeric', month: 'short', day: 'numeric'
+                                        })}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="text-gray-700 space-y-2 mb-4">
-                            <p><strong>Rol:</strong> <span className="capitalize text-green-800 font-medium">{usuario.rol}</span></p>
-                            <p><strong>Estado:</strong> <span className={`capitalize font-medium ${usuario.estado === 'activo' ? 'text-green-600' : usuario.estado === 'inactivo' ? 'text-orange-500' : 'text-red-600'}`}>
-                                {usuario.estado === 'mantenimiento' ? 'Bloqueado' : usuario.estado}
-                            </span></p>
-                            <p><strong>Verificado:</strong> <span className={`font-medium ${usuario.isVerified ? 'text-green-600' : 'text-red-500'}`}>{usuario.isVerified ? "Sí" : "No"}</span></p>
-                            <p className="text-xs text-gray-500 pt-2 border-t border-gray-100 mt-2">
-                                <strong>Creado en:</strong>{" "}
-                                {new Date(usuario.createdAt).toLocaleString("es-CO", {
-                                    dateStyle: "short",
-                                    timeStyle: "medium",
-                                })}
-                            </p>
-                        </div>
-
-                        <div className="flex flex-wrap justify-center gap-2 mt-4">
+                        <div className="flex gap-1">
+                            {/* Icono de Editar */}
                             <button
                                 onClick={() => handleEditar(usuario)}
-                                className={buttonBaseClasses}
+                                className={iconButtonClasses}
+                                title="Editar"
                                 disabled={loading}
                             >
-                                Editar
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-blue-600">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 18.07a4.5 4.5 0 0 1-1.897 1.13L6 20l1.123-3.723a4.5 4.5 0 0 1 1.13-1.897l8.205-8.205Zm1.652 1.652 1.104-1.104" />
+                                </svg>
                             </button>
+
+                            {/* Icono de Eliminar */}
                             <button
                                 onClick={() => eliminarUsuario(usuario.id_persona)}
-                                className={buttonBaseClasses}
+                                className={iconButtonClasses}
+                                title="Eliminar"
                                 disabled={loading}
                             >
-                                Eliminar
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-red-600">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.924a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m-1.022.165 4.125 4.125m-6.68 1.968c-.604 0-1.2-.107-1.75-.32M8.88 5.79h6.24L12 2l-3.12 3.79Z" />
+                                </svg>
                             </button>
+
+                            {/* Botones de Cambio de Estado */}
                             {usuario.estado === 'activo' && (
                                 <button
                                     onClick={() => handleCambiarEstado(usuario.id_persona, 'inactivo')}
-                                    className={buttonBaseClasses}
+                                    className={iconButtonClasses}
+                                    title="Inactivar"
                                     disabled={loading}
                                 >
-                                    Inactivar
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-orange-600">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 12 3a9 9 0 0 0-6.364 15.364M18.364 18.364L12 12m6.364 6.364l-6.364-6.364M6 6l6 6m0 0l-6 6M6 6h.01M18 18h.01" />
+                                    </svg>
                                 </button>
                             )}
                             {usuario.estado !== 'activo' && (
                                 <button
                                     onClick={() => handleCambiarEstado(usuario.id_persona, 'activo')}
-                                    className={buttonBaseClasses}
+                                    className={iconButtonClasses}
+                                    title="Activar"
                                     disabled={loading}
                                 >
-                                    Activar
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-green-600">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
                                 </button>
                             )}
                             {usuario.estado !== 'mantenimiento' && (
                                 <button
                                     onClick={() => handleCambiarEstado(usuario.id_persona, 'mantenimiento')}
-                                    className={buttonBaseClasses}
+                                    className={iconButtonClasses}
+                                    title="Bloquear"
                                     disabled={loading}
                                 >
-                                    Bloquear
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-600">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75M3.75 21h16.5a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 20.25 4.5H3.75A2.25 2.25 0 0 0 1.5 6.75v11.25A2.25 2.25 0 0 0 3.75 21Z" />
+                                    </svg>
                                 </button>
                             )}
                         </div>
@@ -454,9 +652,9 @@ export default function GestionUsuariosPage() {
 
             {/* Modal de Edición */}
             {editarModalOpen && (
-                <Modal
-                    form={form}
-                    setForm={setForm}
+                <EditUserModal
+                    form={editForm}
+                    setForm={setEditForm}
                     onCancel={() => setEditarModalOpen(false)}
                     onConfirm={handleGuardarEdicion}
                     handleImagenChange={handleImagenChange}
@@ -486,107 +684,5 @@ export default function GestionUsuariosPage() {
                 />
             )}
         </main>
-    );
-}
-
-type ModalProps = {
-    form: EditForm;
-    setForm: (value: EditForm) => void;
-    onCancel: () => void;
-    onConfirm: () => void;
-    handleImagenChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    loading: boolean;
-};
-
-function Modal({ form, setForm, onCancel, onConfirm, handleImagenChange, loading }: ModalProps) {
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-4">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-                <h2 className="text-2xl font-bold text-green-700 mb-6 text-center">Editar Usuario</h2>
-
-                <input
-                    placeholder="Nombre de usuario"
-                    value={form.nombre_usuario}
-                    onChange={(e) => setForm({ ...form, nombre_usuario: e.target.value })}
-                    className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-green-500 focus:border-green-500 transition"
-                    disabled={loading}
-                />
-                <input
-                    placeholder="Correo electrónico"
-                    value={form.correo}
-                    onChange={(e) => setForm({ ...form, correo: e.target.value })}
-                    className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-green-500 focus:border-green-500 transition"
-                    disabled={loading}
-                />
-                <select
-                    value={form.rol}
-                    onChange={(e) => setForm({ ...form, rol: e.target.value as "admin" | "operario" })}
-                    className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-green-500 focus:border-green-500 transition"
-                    disabled={loading}
-                >
-                    <option value="operario">Operario</option>
-                    <option value="admin">Admin</option>
-                </select>
-                <select
-                    value={form.estado}
-                    onChange={(e) => setForm({ ...form, estado: e.target.value as "activo" | "inactivo" | "mantenimiento" })}
-                    className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-green-500 focus:border-green-500 transition"
-                    disabled={loading}
-                >
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                    <option value="mantenimiento">Bloqueado (Mantenimiento)</option>
-                </select>
-
-                <div className="flex items-center mb-4">
-                    <input
-                        type="checkbox"
-                        id="isVerifiedModal"
-                        checked={form.isVerified}
-                        onChange={(e) => setForm({ ...form, isVerified: e.target.checked })}
-                        className="mr-2 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                        disabled={loading}
-                    />
-                    <label htmlFor="isVerifiedModal" className="text-gray-700">Usuario Verificado</label>
-                </div>
-
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cambiar Foto de Perfil</label>
-                    {form.foto && (
-                        <Image
-                            src={form.foto}
-                            alt="Previsualización"
-                            width={100}
-                            height={100}
-                            className="rounded-full object-cover mb-3 border-2 border-gray-200 shadow-sm"
-                        />
-                    )}
-                    <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImagenChange}
-                        className="w-full text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition"
-                        disabled={loading}
-                    />
-                </div>
-
-                <div className="flex justify-end gap-3">
-                    <button
-                        onClick={onCancel}
-                        className={buttonBaseClasses}
-                        disabled={loading}
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        className={buttonBaseClasses}
-                        disabled={loading}
-                    >
-                        {loading ? 'Guardando...' : 'Guardar Cambios'}
-                    </button>
-                </div>
-            </div>
-        </div>
     );
 }

@@ -31,12 +31,12 @@ export default function Estadisticas() {
         <DashboardCard
           title="Estadísticas de Riego"
           icon={Droplet} // Using Droplet icon for Riego
-          href="/home/admin/estadisticas/riego"
+          href="/home/operario/estadisticas/riego"
         />
         <DashboardCard
           title="Estadísticas de Iluminación"
           icon={Sun} // Using Sun icon for Iluminación
-          href="/home/admin/estadisticas/iluminacion"
+          href="/home/operario/estadisticas/iluminacion"
         />
         {/* The "Consumos" card has been removed as requested */}
       </div>

@@ -105,7 +105,7 @@ export default function HomePage() {
         <DashboardCard
           title="Estadísticas"
           icon={IconEstadisticas}
-          href="/home/estadisticas"
+          href="/home/admin/estadisticas"
         />
         <DashboardCard
           title="Bitácora"
