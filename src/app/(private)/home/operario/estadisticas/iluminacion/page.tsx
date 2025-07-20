@@ -1,151 +1,254 @@
 "use client";
 
 import React, { useState } from "react";
-import { FaLightbulb, FaClock, FaChartLine, FaBolt, FaSun } from "react-icons/fa";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { Sun, Droplets, Leaf, AlertCircle } from "lucide-react";
 
-interface CardProps {
-  icon: React.ElementType;
-  title: string;
-  value: string;
-  description: string;
-  iconColor?: string;
-  valueColor?: string;
-}
+// Datos resumen
+const resumen = {
+  invernaderosActivos: 3,
+  totalInvernaderos: 5,
+  zonasActivas: 10,
+  totalZonas: 15,
+  iluminacionesHoy: 4,
+  iluminacionActiva: 2,
+};
 
-// Reusable Card Component
-const Card: React.FC<CardProps> = ({
-  icon: Icon,
-  title,
-  value,
-  description,
-  iconColor = "text-green-600", // Default green for icons
-  valueColor = "text-green-700", // Default green for values
-}) => (
-  <div className="rounded-xl p-6 shadow-xl bg-white hover:shadow-2xl transition-shadow duration-300">
-    <div className="flex items-center mb-4">
-      <Icon className={`text-4xl mr-4 ${iconColor}`} />
-      <h3 className="text-xl font-semibold text-gray-700">{title}</h3>
-    </div>
-    <p className={`text-2xl font-bold ${valueColor}`}>{value}</p>
-    <p className="mt-2 text-gray-500">{description}</p>
-  </div>
-);
-
-// Data for illumination statistics by greenhouse with green color sequence
+// Datos de iluminación
 const datosIluminacion = {
-  "Invernadero 1": [
-    {
-      icon: FaBolt,
-      titulo: 'Consumo en Vatios "W" a la Semana',
-      valor: "180 vatios",
-      description: "Promedio semanal de vatios utilizados para la iluminación.",
-      iconColor: "text-green-500", // Green shades
-      valueColor: "text-green-700",
-    },
-    {
-      icon: FaClock,
-      titulo: "Tiempo de Iluminación",
-      valor: "18 Horas/Día",
-      description: "Promedio diario de iluminación.",
-      iconColor: "text-emerald-500", // Different green shade
-      valueColor: "text-emerald-700",
-    },
-    {
-      icon: FaChartLine,
-      titulo: "Frecuencia de Encendido",
-      valor: "2 veces/día",
-      description: "Frecuencia de iluminación por día.",
-      iconColor: "text-lime-500", // Another green shade
-      valueColor: "text-lime-700",
-    },
-    {
-      icon: FaLightbulb,
-      titulo: "Lúmenes Promedio",
-      valor: "25.000 lm",
-      description: "Nivel de luz promedio generado en el invernadero.",
-      iconColor: "text-teal-500", // Yet another green shade
-      valueColor: "text-teal-700",
-    },
+  Dia: [
+    { dia: "Lun", iluminacion: 3 },
+    { dia: "Mar", iluminacion: 5 },
+    { dia: "Mié", iluminacion: 4 },
+    { dia: "Jue", iluminacion: 6 },
+    { dia: "Vie", iluminacion: 3 },
+    { dia: "Sáb", iluminacion: 2 },
+    { dia: "Dom", iluminacion: 5 },
   ],
-  "Invernadero 2": [
-    {
-      icon: FaBolt,
-      titulo: 'Consumo en Vatios "W" a la Semana',
-      valor: "200 vatios",
-      description: "Promedio semanal de vatios utilizados para la iluminación.",
-      iconColor: "text-green-600",
-      valueColor: "text-green-800",
-    },
-    {
-      icon: FaClock,
-      titulo: "Tiempo de Iluminación",
-      valor: "16 Horas/Día",
-      description: "Promedio diario de iluminación.",
-      iconColor: "text-emerald-600",
-      valueColor: "text-emerald-800",
-    },
-    {
-      icon: FaChartLine,
-      titulo: "Frecuencia de Encendido",
-      valor: "3 veces/día",
-      description: "Frecuencia de iluminación por día.",
-      iconColor: "text-lime-600",
-      valueColor: "text-lime-800",
-    },
-    {
-      icon: FaLightbulb,
-      titulo: "Lúmenes Promedio",
-      valor: "30.000 lm",
-      description: "Nivel de luz promedio generado en el invernadero.",
-      iconColor: "text-teal-600",
-      valueColor: "text-teal-800",
-    },
+  Semana: [
+    { dia: "Semana 1", iluminacion: 26 },
+    { dia: "Semana 2", iluminacion: 31 },
+  ],
+  Mes: [
+    { dia: "Jul", iluminacion: 108 },
+    { dia: "Jun", iluminacion: 95 },
   ],
 };
 
-// Iluminacion Page Component
-export default function Iluminacion() {
-  const [invernaderoSeleccionado, setInvernaderoSeleccionado] = useState<keyof typeof datosIluminacion>("Invernadero 1");
-  const estadisticas = datosIluminacion[invernaderoSeleccionado];
+// Estado de zonas
+const zonasEstado = [
+  { nombre: "Activas", valor: 10 },
+  { nombre: "Inactivas", valor: 3 },
+  { nombre: "Mantenimiento", valor: 2 },
+];
+
+// Colores para pie chart en tonos de amarillo y naranja suave
+const coloresPie = ["#fd8b08ff", "#f0fc4dff", "#fbbf24"];
+
+// Historial de iluminación
+const historial = [
+  { fecha: "20/07", invernadero: "Inv-1", zona: "Zona 1", tipo: "Iluminación", accion: "Encendido", estado: "Completado" },
+  { fecha: "20/07", invernadero: "Inv-2", zona: "Zona 2", tipo: "Iluminación", accion: "Apagado", estado: "Pendiente" },
+  { fecha: "19/07", invernadero: "Inv-3", zona: "Zona 3", tipo: "Iluminación", accion: "Encendido", estado: "OK" },
+];
+
+export default function EstadisticasIluminacion() {
+  const [filtro, setFiltro] = useState<"Dia" | "Semana" | "Mes">("Dia");
+  const [modalContent, setModalContent] = useState<React.ReactNode | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const openModal = (content: React.ReactNode) => {
+    setModalContent(content);
+    setShowModal(true);
+  };
+
+  const datosFiltrados = datosIluminacion[filtro];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex flex-col items-center justify-start py-12 px-4">
-      <div className="w-full max-w-5xl bg-white shadow-2xl rounded-3xl p-10">
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-center text-green-700 mb-8 flex items-center justify-center gap-2">
-          <FaSun className="text-green-500" /> {/* Sun icon now green */}
-          Informe de Iluminación
-        </h2>
+    <div className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen space-y-8 transition-all duration-300">
+      <h1 className="text-3xl font-bold mb-4">Estadísticas de Iluminación</h1>
 
-        {/* Stylized Greenhouse Selector */}
-        <div className="flex justify-center mb-10">
+      {/* Cards resumen */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+        <Card
+          icon={<Leaf size={20} />}
+          title="Invernaderos Activos"
+          value={`${resumen.invernaderosActivos} / ${resumen.totalInvernaderos}`}
+          onClick={() => openModal(<ModalContent title="Invernaderos Activos" items={["Inv-1", "Inv-2", "Inv-3"]} />)}
+        />
+        <Card
+          icon={<Droplets size={20} />}
+          title="Zonas Activas"
+          value={`${resumen.zonasActivas} / ${resumen.totalZonas}`}
+          onClick={() =>
+            openModal(
+              <ModalContent
+                title="Zonas Activas"
+                items={[
+                  "Zona 1", "Zona 3", "Zona 4", "Zona 5", "Zona 6",
+                  "Zona 7", "Zona 8", "Zona 9", "Zona 10", "Zona 11",
+                ]}
+              />
+            )
+          }
+        />
+        <Card
+          icon={<Sun size={20} />}
+          title="Iluminaciones Hoy"
+          value={resumen.iluminacionesHoy}
+          onClick={() =>
+            openModal(
+              <ModalContent
+                title="Iluminaciones de Hoy"
+                items={["Inv-1 / Zona 1", "Inv-2 / Zona 2", "Inv-3 / Zona 3", "Inv-1 / Zona 4"]}
+              />
+            )
+          }
+        />
+        <Card icon={<AlertCircle size={20} />} title="Alertas Activas" value="0" />
+      </div>
+
+      {/* Línea de historial */}
+      <div className="bg-white shadow rounded-xl p-5">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="font-semibold text-xl ">Historial de Iluminación</h2>
           <select
-            value={invernaderoSeleccionado}
-            onChange={(e) => setInvernaderoSeleccionado(e.target.value as keyof typeof datosIluminacion)}
-            className="appearance-none bg-green-100 text-green-900 border border-green-300 rounded-lg px-6 py-2 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-400 transition duration-200"
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value as "Dia" | "Semana" | "Mes")}
+            className="border rounded px-2 py-1 text-sm"
           >
-            {Object.keys(datosIluminacion).map((nombreInvernadero) => (
-              <option key={nombreInvernadero} value={nombreInvernadero}>
-                {nombreInvernadero}
-              </option>
-            ))}
+            <option value="Dia">Por día</option>
+            <option value="Semana">Por semana</option>
+            <option value="Mes">Por mes</option>
           </select>
         </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {estadisticas.map((item, index) => (
-            <Card
-              key={index}
-              icon={item.icon}
-              title={item.titulo}
-              value={item.valor}
-              description={item.description}
-              iconColor={item.iconColor}
-              valueColor={item.valueColor}
+        <ResponsiveContainer width="100%" height={270}>
+          <LineChart data={datosFiltrados}>
+            <CartesianGrid stroke="#e5e7eb" />
+            <XAxis dataKey="dia" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line
+              type="monotone"
+              dataKey="iluminacion"
+              stroke="#facc15e1" // amarillo fuerte
+              strokeWidth={3}
+              dot={{ r: 5 }}
             />
-          ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Pie chart y tabla */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white shadow rounded-xl p-6">
+          <h2 className="font-semibold text-xl mb-4 ">Estado de Zonas</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie data={zonasEstado} dataKey="valor" nameKey="nombre" outerRadius={80} label>
+                {zonasEstado.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={coloresPie[index % coloresPie.length]} />
+                ))}
+              </Pie>
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white shadow rounded-xl p-6 overflow-auto">
+          <h2 className="font-semibold text-xl mb-4">Historial de Eventos</h2>
+          <table className="w-full text-sm">
+            <thead className="text-gray-600">
+              <tr>
+                <th className="py-2">Fecha</th>
+                <th>Invernadero</th>
+                <th>Zona</th>
+                <th>Tipo</th>
+                <th>Acción</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historial.map((item, i) => (
+                <tr key={i} className="border-t">
+                  <td className="py-2">{item.fecha}</td>
+                  <td>{item.invernadero}</td>
+                  <td>{item.zona}</td>
+                  <td>{item.tipo}</td>
+                  <td>{item.accion}</td>
+                  <td>{item.estado}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg relative">
+            <button
+              className="absolute top-4 right-4 text-gray-500 text-xl"
+              onClick={() => setShowModal(false)}
+            >
+              ✕
+            </button>
+            {modalContent}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Card component
+function Card({
+  title,
+  value,
+  icon,
+  onClick,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className="cursor-pointer bg-white shadow rounded-xl p-4 flex flex-col items-center text-center hover:ring-2 hover:ring-yellow-300 transition"
+    >
+      <div className="text-yellow-500 mb-1">{icon}</div>
+      <h3 className="text-xs text-gray-500">{title}</h3>
+      <p className="text-lg font-bold">{value}</p>
+    </div>
+  );
+}
+
+// ModalContent
+function ModalContent({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <h2 className="text-lg font-semibold mb-4">{title}</h2>
+      <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
+        {items.map((item, idx) => (
+          <li key={idx}>{item}</li>
+        ))}
+      </ul>
     </div>
   );
 }

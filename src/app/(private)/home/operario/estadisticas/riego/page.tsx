@@ -2,136 +2,247 @@
 
 import React, { useState } from "react";
 import {
-  FaWater, // Icono para Consumo de Agua (mantener por si lo quieres en otra métrica)
-  FaClock, // Icono para Tiempo de Riego
-  FaChartLine, // Icono para Frecuencia de Riego
-  FaCloudRain, // Nuevo icono para Humedad Ambiental (FaLayerGroup era el anterior)
-  FaTint, // Icono para Humedad del Suelo
-  FaLeaf, // Icono para el título de la página
-} from "react-icons/fa";
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { Droplets, Sun, Leaf, AlertCircle } from "lucide-react";
+import { FaClock } from "react-icons/fa";
 
-interface CardProps {
-  icon: React.ElementType;
-  title: string;
-  value: string;
-  description: string;
-  iconColor?: string;
-  valueColor?: string;
-}
-
-const Card: React.FC<CardProps> = ({
-  icon: Icon,
-  title,
-  value,
-  description,
-  iconColor = "text-green-600",
-  valueColor = "text-green-700",
-}) => (
-  <div className="rounded-xl p-6 shadow-xl bg-white hover:shadow-2xl transition-shadow duration-300">
-    <div className="flex items-center mb-4">
-      <Icon className={`text-4xl mr-4 ${iconColor}`} />
-      <h3 className="text-xl font-semibold text-gray-700">{title}</h3>
-    </div>
-    <p className={`text-2xl font-bold ${valueColor}`}>{value}</p>
-    <p className="mt-2 text-gray-500">{description}</p>
-  </div>
-);
+const resumen = {
+  invernaderosActivos: 3,
+  totalInvernaderos: 5,
+  zonasActivas: 10,
+  totalZonas: 15,
+  riegosHoy: 5,
+  iluminacionActiva: 2,
+};
 
 const datosRiego = {
-  "Invernadero 1": [
-    {
-      icon: FaCloudRain, // Cambiado de FaWater a FaCloudRain
-      titulo: "Humedad Ambiental", // Cambiado de Consumo de Agua
-      valor: "75%", // Valor de ejemplo para humedad
-      description: "Nivel de humedad promedio en el aire del invernadero.",
-    },
-    {
-      icon: FaClock,
-      titulo: "Tiempo de Riego",
-      valor: "2 Horas/Día",
-      description: "Promedio diario de horas de riego.",
-    },
-    {
-      icon: FaChartLine,
-      titulo: "Frecuencia de Riego",
-      valor: "2 veces/día",
-      description: "Frecuencia de riego por día.",
-    },
-    {
-      icon: FaTint, // Usando FaTint para Humedad del Suelo
-      titulo: "Humedad del Suelo",
-      valor: "60%",
-      description: "Promedio semanal de humedad del suelo.",
-    },
+  Dia: [
+    { dia: "Lun", riego: 4 },
+    { dia: "Mar", riego: 2 },
+    { dia: "Mié", riego: 3 },
+    { dia: "Jue", riego: 5 },
+    { dia: "Vie", riego: 4 },
+    { dia: "Sáb", riego: 1 },
+    { dia: "Dom", riego: 3 },
   ],
-  "Invernadero 2": [
-    {
-      icon: FaCloudRain, // Cambiado de FaWater a FaCloudRain
-      titulo: "Humedad Ambiental", // Cambiado de Consumo de Agua
-      valor: "68%", // Valor de ejemplo para el segundo invernadero
-      description: "Nivel de humedad promedio en el aire del invernadero.",
-    },
-    {
-      icon: FaClock,
-      titulo: "Tiempo de Riego",
-      valor: "1.5 Horas/Día",
-      description: "Promedio diario de horas de riego.",
-    },
-    {
-      icon: FaChartLine,
-      titulo: "Frecuencia de Riego",
-      valor: "3 veces/día",
-      description: "Frecuencia de riego por día.",
-    },
-    {
-      icon: FaTint, // Usando FaTint para Humedad del Suelo
-      titulo: "Humedad del Suelo",
-      valor: "70%",
-      description: "Promedio semanal de humedad del suelo.",
-    },
+  Semana: [
+    { dia: "Semana 1", riego: 22 },
+    { dia: "Semana 2", riego: 18 },
+  ],
+  Mes: [
+    { dia: "Jul", riego: 90 },
+    { dia: "Jun", riego: 85 },
   ],
 };
 
-export default function Riego() {
-  const [invernaderoSeleccionado, setInvernaderoSeleccionado] = useState<keyof typeof datosRiego>("Invernadero 1");
-  const estadisticas = datosRiego[invernaderoSeleccionado];
+const zonasEstado = [
+  { nombre: "Activas", valor: 10 },
+  { nombre: "Inactivas", valor: 3 },
+  { nombre: "Mantenimiento", valor: 2 },
+];
+
+const coloresPie = ["#4581dbff", "#10B981", "#22D3EE"];
+
+
+
+
+
+const historial = [
+  { fecha: "20/07", invernadero: "Inv-1", zona: "Zona 1", tipo: "Riego", accion: "Activado", estado: "Completado" },
+  { fecha: "20/07", invernadero: "Inv-2", zona: "Zona 2", tipo: "Riego", accion: "Desactivado", estado: "Pendiente" },
+  { fecha: "19/07", invernadero: "Inv-1", zona: "Zona 3", tipo: "Riego", accion: "Activado", estado: "OK" },
+];
+
+export default function EstadisticasPage() {
+  const [filtro, setFiltro] = useState<"Dia" | "Semana" | "Mes">("Dia");
+  const [modalContent, setModalContent] = useState<React.ReactNode | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const openModal = (content: React.ReactNode) => {
+    setModalContent(content);
+    setShowModal(true);
+  };
+
+  const datosFiltrados = datosRiego[filtro];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex flex-col items-center justify-start py-12 px-4">
-      <div className="w-full max-w-5xl bg-white shadow-2xl rounded-3xl p-10">
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-center text-green-700 mb-8 flex items-center justify-center gap-2">
-          <FaLeaf className="text-green-600" />
-          Informe de Riego y Humedad Ambiental
-        </h2>
+    <div className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen space-y-8 transition-all duration-300">
+      <h1 className="text-3xl font-bold mb-4">Estadísticas de Riego</h1>
 
-        {/* Selector de Invernadero */}
-        <div className="flex justify-center mb-10">
+      {/* Cards resumen con onClick */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+
+
+        <Card icon={<Leaf size={20} />} title="Invernaderos Activos" value={`${resumen.invernaderosActivos} / ${resumen.totalInvernaderos}`} onClick={() =>
+          openModal(
+            <ModalContent title="Invernaderos Activos" items={["Inv-1", "Inv-2", "Inv-3"]} />
+          )
+        } />
+        <Card icon={<Droplets size={20} />} title="Zonas Activas" value={`${resumen.zonasActivas} / ${resumen.totalZonas}`} onClick={() =>
+          openModal(
+            <ModalContent title="Zonas Activas" items={["Zona 1", "Zona 3", "Zona 4", "Zona 5", "Zona 6", "Zona 7", "Zona 8", "Zona 9", "Zona 10", "Zona 11"]} />
+          )
+        } />
+        <Card icon={<Droplets size={20} />} title="Riegos Hoy" value={resumen.riegosHoy} onClick={() =>
+          openModal(
+            <ModalContent title="Riegos de Hoy" items={["Inv-1 / Zona 1", "Inv-2 / Zona 3", "Inv-2 / Zona 2", "Inv-3 / Zona 4", "Inv-1 / Zona 5"]} />
+          )
+        } />
+        <Card icon={<AlertCircle size={20} />} title="Alertas Activas" value="0" />
+      </div>
+
+      {/* Gráfico de línea */}
+      <div className="bg-white shadow rounded-xl p-5">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="font-semibold text-xl">Historial de Riegos</h2>
           <select
-            value={invernaderoSeleccionado}
-            onChange={(e) => setInvernaderoSeleccionado(e.target.value as keyof typeof datosRiego)}
-            className="appearance-none bg-green-100 text-green-900 border border-green-300 rounded-lg px-6 py-2 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-400 transition duration-200"
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value as "Dia" | "Semana" | "Mes")}
+            className="border rounded px-2 py-1 text-sm"
           >
-            {Object.keys(datosRiego).map((nombreInvernadero) => (
-              <option key={nombreInvernadero} value={nombreInvernadero}>
-                {nombreInvernadero}
-              </option>
-            ))}
+            <option value="Dia">Por día</option>
+            <option value="Semana">Por semana</option>
+            <option value="Mes">Por mes</option>
           </select>
         </div>
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={datosFiltrados}>
+            <CartesianGrid stroke="#e5e7eb" />
+            <XAxis dataKey="dia" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="riego" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
 
-        {/* Tarjetas de Estadísticas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {estadisticas.map((item, index) => (
-            <Card
-              key={index}
-              icon={item.icon}
-              title={item.titulo}
-              value={item.valor}
-              description={item.description}
-            />
-          ))}
+      {/* Pie y tabla de historial */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white shadow rounded-xl p-6">
+          <h2 className="font-semibold text-xl mb-4">Estado de Zonas</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie data={zonasEstado} dataKey="valor" nameKey="nombre" outerRadius={80} label>
+                {zonasEstado.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={coloresPie[index % coloresPie.length]} />
+                ))}
+              </Pie>
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white shadow rounded-xl p-6 overflow-auto">
+          <h2 className="font-semibold text-xl mb-4">Historial de Eventos</h2>
+          <table className="w-full text-sm">
+            <thead className="text-gray-600">
+              <tr>
+                <th className="py-2">Fecha</th>
+                <th>Invernadero</th>
+                <th>Zona</th>
+                <th>Tipo</th>
+                <th>Acción</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historial.map((item, i) => (
+                <tr key={i} className="border-t">
+                  <td className="py-2">{item.fecha}</td>
+                  <td>{item.invernadero}</td>
+                  <td>{item.zona}</td>
+                  <td>{item.tipo}</td>
+                  <td>{item.accion}</td>
+                  <td>{item.estado}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
+
+      {/* Sensores */}
+      <div className="bg-white shadow rounded-xl p-6">
+        <h2 className="font-semibold text-xl mb-4">Lecturas en Tiempo Real</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 text-sm">
+          <SensorCard icon={<Sun size={20} className="text-yellow-500" />} titulo="Temperatura Ambiental" valor="28°C" descripcion="Lectura actual desde sensores exteriores." />
+          <SensorCard icon={<Droplets size={20} className="text-blue-500" />} titulo="Humedad del Suelo" valor="60%" descripcion="Promedio semanal de humedad del suelo." />
+          <SensorCard icon={<FaClock size={20} className="text-emerald-500" />} titulo="Tiempo de Riego Diario" valor="2 h" descripcion="Tiempo total acumulado hoy." />
+        </div>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
+            <button className="absolute top-4 right-4 text-gray-500" onClick={() => setShowModal(false)}>
+              ✕
+            </button>
+            {modalContent}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Card
+function Card({
+  title,
+  value,
+  icon,
+  onClick,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <div onClick={onClick} className={`cursor-pointer bg-white shadow rounded-xl p-4 flex flex-col items-center text-center hover:ring-2 hover:ring-blue-300 transition`}>
+      <div className="text-blue-500 mb-1">{icon}</div>
+      <h3 className="text-xs text-gray-500">{title}</h3>
+      <p className="text-lg font-bold">{value}</p>
+    </div>
+  );
+}
+
+// SensorCard
+function SensorCard({ icon, titulo, valor, descripcion }: { icon: React.ReactNode; titulo: string; valor: string; descripcion: string }) {
+  return (
+    <div className="bg-gray-100 border border-gray-200 p-4 rounded-xl shadow-sm flex gap-4 items-start">
+      <div className="p-2 bg-white rounded-full shadow">{icon}</div>
+      <div>
+        <h3 className="font-semibold text-gray-800">{titulo}</h3>
+        <p className="text-lg font-bold text-gray-700">{valor}</p>
+        <p className="text-gray-500 text-xs">{descripcion}</p>
+      </div>
+    </div>
+  );
+}
+
+// ModalContent
+function ModalContent({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <h2 className="text-lg font-semibold mb-4">{title}</h2>
+      <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
+        {items.map((item, idx) => (
+          <li key={idx}>{item}</li>
+        ))}
+      </ul>
     </div>
   );
 }
