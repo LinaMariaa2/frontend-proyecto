@@ -6,6 +6,17 @@ import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import { useRef } from "react";
 import { PencilIcon } from "@heroicons/react/24/outline";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceArea,
+} from "recharts";
 
 interface Zona {
   id_zona: number;
@@ -222,13 +233,22 @@ export default function ZonasPage() {
 
  return (
   <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
-    <h1 className="text-3xl font-bold text-green-800 mb-4">
-      Zonas del Invernadero #{id_invernadero}
-    </h1>
+    <div className="flex justify-between items-center mb-4">
+  <h1 className="text-3xl font-bold text-green-800">
+    Zonas del Invernadero #{id_invernadero}
+  </h1>
+  <button
+    onClick={() => setModalOpen(true)}
+    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-full shadow-md transition-all"
+  >
+    + Crear Zona
+  </button>
+</div>
 
-    <p className="text-gray-600 mb-8">
-      Total zonas: <strong>{totalZonas}</strong> | Zonas activas: <strong>{zonasActivas}</strong>
-    </p>
+<p className="text-gray-600 mb-8">
+  Total zonas: <strong>{totalZonas}</strong> | Zonas activas: <strong>{zonasActivas}</strong>
+</p>
+
 
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {zonas.map((zona) => (
@@ -307,6 +327,45 @@ export default function ZonasPage() {
             ID Zona: {zona.id_zona} | Invernadero: {id_invernadero}
           </p>
 
+            {/* 🌡️ Gráfica comparativa de humedad (datos quemados) */}
+                        <div className="w-full h-56 my-3">
+              <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                Humedad Ideal vs Actual
+              </h3>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={[
+                    { tiempo: "Ahora", humedad_ideal: 65, humedad_actual: 48 },
+                    { tiempo: "Hace 10m", humedad_ideal: 65, humedad_actual: 50 },
+                    { tiempo: "Hace 20m", humedad_ideal: 65, humedad_actual: 52 },
+                    { tiempo: "Hace 30m", humedad_ideal: 65, humedad_actual: 55 },
+                  ]}
+                  margin={{ top: 10, right: 30, left: -20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="tiempo" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="humedad_ideal"
+                    stroke="#86da86ff"
+                    strokeWidth={2}
+                    dot={false}
+                    name="Humedad Ideal"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="humedad_actual"
+                    stroke="#10b981ff"
+                    strokeWidth={2}
+                    name="Humedad Actual"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            
           <div className="flex justify-between mt-4">
             <Link
               href={`/home/admin/invernaderos/zonas/programacion-riego?id=${zona.id_zona}`}
@@ -325,14 +384,7 @@ export default function ZonasPage() {
       ))}
     </div>
 
-    <div className="mt-10 flex justify-center">
-      <button
-        onClick={() => setModalOpen(true)}
-        className="bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-3 rounded-full transition"
-      >
-        Crear Zona
-      </button>
-    </div>
+    
 
     {/* Modal crear zona */}
     {modalOpen && (

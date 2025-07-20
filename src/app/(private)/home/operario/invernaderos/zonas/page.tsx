@@ -4,6 +4,18 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import axios from "axios";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceArea,
+} from "recharts";
+
 
 interface Zona {
   id_zona: number;
@@ -18,6 +30,11 @@ interface Cultivo {
   nombre_cultivo: string;
 }
 
+
+
+// Rango ideal del cultivo (quemado también)
+const rangoHumedad = { min: 50, max: 65 };
+const rangoTemperatura = { min: 22, max: 30 };
 export default function ZonasOperario() {
   const searchParams = useSearchParams();
   const id_invernadero = searchParams.get("id_invernadero") || "1";
@@ -97,6 +114,45 @@ export default function ZonasOperario() {
             <p className="text-xs text-gray-500">
               ID Zona: {zona.id_zona} | Invernadero: {id_invernadero}
             </p>
+            {/* 🌡️ Gráfica comparativa de humedad (datos quemados) */}
+            <div className="w-full h-56 my-3">
+  <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+    Humedad Ideal vs Actual
+  </h3>
+  <ResponsiveContainer width="100%" height="100%">
+    <LineChart
+      data={[
+        { tiempo: "Ahora", humedad_ideal: 65, humedad_actual: 48 },
+        { tiempo: "Hace 10m", humedad_ideal: 65, humedad_actual: 50 },
+        { tiempo: "Hace 20m", humedad_ideal: 65, humedad_actual: 52 },
+        { tiempo: "Hace 30m", humedad_ideal: 65, humedad_actual: 55 },
+      ]}
+      margin={{ top: 10, right: 30, left: -20, bottom: 5 }}
+    >
+      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+      <XAxis dataKey="tiempo" tick={{ fontSize: 11 }} />
+      <YAxis tick={{ fontSize: 11 }} />
+      <Tooltip />
+      <Legend />
+      <Line
+        type="monotone"
+        dataKey="humedad_ideal"
+        stroke="#86da86ff"
+        strokeWidth={2}
+        dot={false}
+        name="Humedad Ideal"
+      />
+      <Line
+        type="monotone"
+        dataKey="humedad_actual"
+        stroke="#10b981ff"
+        strokeWidth={2}
+        name="Humedad Actual"
+      />
+    </LineChart>
+  </ResponsiveContainer>
+</div>
+
 
             <div className="flex justify-between mt-4">
               <Link
