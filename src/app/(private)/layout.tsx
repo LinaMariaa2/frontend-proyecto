@@ -1,16 +1,25 @@
-import { ReactNode } from 'react';
+// src/app/layout.tsx
+import { UserProvider } from '../context/UserContext';
 import '../styles/globals.css'
+
+
 export const metadata = {
-  title: 'HortiTech',
-  description: 'Automatización de invernaderos',
+  title: 'HortiTech App',
+  description: 'Aplicación de gestión para HortiTech',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="es">
-      <head />
-      <body>{children}</body>
+      <body>
+        <UserProvider>
+          {children}
+        </UserProvider>
+      </body>
     </html>
   );
 }
-

@@ -1,9 +1,7 @@
 // src/services/api.ts
 import axios from 'axios';
 
-// ¡IMPORTANTE! Asegúrate de que esta URL coincida con la de tu backend
-// En desarrollo, probablemente sea 'http://localhost:4000/api'
-// En producción, será la URL de tu backend desplegado
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000/api';
 
 const api = axios.create({

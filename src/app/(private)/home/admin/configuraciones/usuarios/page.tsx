@@ -1,11 +1,10 @@
-// src/app/(private)/home/admin/configuraciones/usuarios/page.tsx
+
 "use client";
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import api from "@/app/services/api";
 
-// --- INTERFACES UNIFICADAS CON EL BACKEND ---
 interface Usuario {
     id_persona: number;
     nombre_usuario: string;
@@ -14,11 +13,11 @@ interface Usuario {
     estado: "activo" | "inactivo" | "mantenimiento";
     isVerified: boolean;
     createdAt: string;
-    foto_url?: string; // Propiedad que viene del backend (directamente)
-    perfil?: { // Propiedad que viene del backend (anidada)
+    foto_url?: string; 
+    perfil?: {
         foto_url?: string;
     };
-    foto?: string; // Propiedad para el frontend que usará el Image component (mapeada)
+    foto?: string;
 }
 
 interface EditForm {
@@ -37,7 +36,7 @@ interface CreateForm {
     rol: "admin" | "operario";
 }
 
-// --- COMPONENTES DE MODALES PERSONALIZADOS ---
+
 const buttonBaseClasses = "px-4 py-2 rounded-full text-sm font-semibold transition transform duration-200 ease-in-out shadow-md bg-green-600 hover:bg-green-700 text-white";
 const iconButtonClasses = "p-1 rounded-full hover:bg-gray-200 transition duration-150 ease-in-out";
 

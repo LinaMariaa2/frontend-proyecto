@@ -1,4 +1,4 @@
-// src/app/(private)/home/admin/configuraciones/registro/page.tsx
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -18,8 +18,8 @@ export default function RegistroUsuario() {
 
     const [verificando, setVerificando] = useState(false);
     const [codigoEnviado, setCodigoEnviado] = useState(false);
-    const [expiraEn, setExpiraEn] = useState(0); // Será actualizado por el backend si envía código
-    const [registrationEmail, setRegistrationEmail] = useState(''); // Para guardar el email del registro exitoso
+    const [expiraEn, setExpiraEn] = useState(0); 
+    const [registrationEmail, setRegistrationEmail] = useState(''); 
 
     const [errores, setErrores] = useState({
         nombre: '',
@@ -101,8 +101,8 @@ export default function RegistroUsuario() {
             setMensajeExito(response.data.message || 'Usuario registrado exitosamente. Se ha enviado un código de verificación a tu correo.');
             setVerificando(true);
             setCodigoEnviado(true);
-            setExpiraEn(600); // Suponemos 10 minutos de expiración, el backend podría enviarlo
-            setRegistrationEmail(email); // Guardar el email para la verificación
+            setExpiraEn(600);
+            setRegistrationEmail(email); 
         } catch (err: any) {
             console.error('Error en el registro:', err.response?.data || err.message);
             setErrores((prev) => ({ ...prev, general: err.response?.data?.error || 'Error al registrar usuario.' }));
@@ -124,7 +124,7 @@ export default function RegistroUsuario() {
 
         setLoading(true);
         try {
-            // Envía el correo y el código al backend para verificación
+    
            const response = await api.post('/auth/verify-email', {
             correo: registrationEmail,
             verificationCode: codigo,
@@ -133,11 +133,8 @@ export default function RegistroUsuario() {
             setMensajeExito(response.data.message || '¡Correo verificado correctamente! Ahora puedes iniciar sesión.');
             setVerificando(false);
             setCodigoEnviado(false);
-            // Opcional: Redirigir al login o al dashboard después de la verificación exitosa
-            // router.push('/login');
-            // O, si es para admin, quizás mantenerlo en la lista de usuarios o mostrar un mensaje claro
+          
             alert('¡Cuenta verificada correctamente! Ahora el usuario puede iniciar sesión.');
-            // Limpiar formulario después de un registro/verificación exitosa si el admin se queda en la misma página
             setNombreCompleto('');
             setApellidoCompleto('');
             setEmail('');
@@ -158,10 +155,10 @@ export default function RegistroUsuario() {
         setLoading(true);
         try {
             const response = await api.post('/auth/resend-verification-code', {
-                correo: registrationEmail, // Asegúrate de tener el correo del usuario registrado
+                correo: registrationEmail,
             });
             setMensajeExito(response.data.message || 'Nuevo código enviado a tu correo.');
-            setExpiraEn(600); // Reiniciar temporizador
+            setExpiraEn(600); 
             setCodigoEnviado(true);
         } catch (err: any) {
             console.error('Error al reenviar código:', err.response?.data || err.message);

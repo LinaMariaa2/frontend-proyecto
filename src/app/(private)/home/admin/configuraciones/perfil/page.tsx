@@ -1,4 +1,4 @@
-// src/app/(private)/home/admin/configuraciones/perfil/page.tsx (Tu código actual, verificado)
+
 "use client";
 
 import React, { useState, useEffect } from "react";
