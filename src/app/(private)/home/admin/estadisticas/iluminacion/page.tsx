@@ -17,6 +17,7 @@ import {
 import { Sun, Droplets, Leaf, AlertCircle } from "lucide-react";
 
 // Datos resumen
+//falta integracion
 const resumen = {
   invernaderosActivos: 3,
   totalInvernaderos: 5,
