@@ -143,25 +143,6 @@ export default function LoginPage() {
                         {passwordError && <p className="text-red-500 text-sm mt-1">{passwordError}</p>}
                     </div>
 
-                    {/* --- CAMBIO: Se restaura el selector de rol --- */}
-                    <div>
-                        <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                            Rol de Usuario
-                        </label>
-                        <div className="relative">
-                             <UserSquare className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                             <select
-                                id="role"
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                                className="w-full border border-gray-300 p-3 pl-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
-                                disabled={loading} 
-                            >
-                                <option value="admin">Administrador</option>
-                                <option value="operario">Operario</option>
-                            </select>
-                        </div>
-                    </div>
 
                     <div className="flex items-center justify-end">
                         <Link href="/recpassword" className="text-sm font-medium text-teal-600 hover:text-teal-700 hover:underline">
