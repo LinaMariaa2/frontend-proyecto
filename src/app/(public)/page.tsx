@@ -36,12 +36,9 @@ const Header = (): JSX.Element => (
                 <span>Hotitech</span>
             </Link>
             <div className="flex items-center gap-4">
-                <Link href="/login" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors">
-                    Iniciar Sesión
-                </Link>
                 {/* --- CAMBIO: Botón de CTA principal en el header --- */}
-                <Link href="/register" className="hidden sm:inline-block bg-teal-600 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors">
-                    Empezar Gratis
+                <Link href="/login" className="hidden sm:inline-block bg-teal-600 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors">
+                    Iniciar Sesión
                 </Link>
             </div>
         </nav>
@@ -115,12 +112,6 @@ export default function HomePage(): JSX.Element {
             </motion.p>
             {/* --- CAMBIO: Botones de CTA más claros --- */}
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
-              <Link 
-                href="/register" 
-                className="bg-teal-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-teal-700 transition-all duration-300 transform hover:scale-105"
-              >
-                Empezar Ahora
-              </Link>
               <Link 
                 href="#features" 
                 className="font-semibold text-slate-700 flex items-center gap-2 group py-3 px-6"
