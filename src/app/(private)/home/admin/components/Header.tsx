@@ -1,30 +1,43 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Menu, X, Moon, Sun, Settings, LogOut, User as UserIcon } from 'lucide-react';
+import Image from 'next/image';
+import { Menu, X, Moon, Sun, Settings, LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
 import { useUser } from '@/app/context/UserContext'; 
 
+// --- Interfaces y Tipos ---
 interface HeaderProps {
     isSidebarOpen: boolean;
     toggleSidebar: () => void; 
 }
 
+// --- Componente Principal del Header ---
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     const { user, logout, isLoading } = useUser();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [isDark, setIsDark] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
 
+    // Efecto para manejar el tema claro/oscuro
     useEffect(() => {
         const storedTheme = localStorage.getItem('theme');
-        const prefersDark =
-            storedTheme === 'dark' ||
-            (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        const prefersDark = storedTheme === 'dark' || (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
         setIsDark(prefersDark);
         document.documentElement.classList.toggle('dark', prefersDark);
     }, []);
 
-    const toggleProfileMenu = () => setShowProfileMenu(!showProfileMenu);
+    // Efecto para cerrar el menú de perfil al hacer clic fuera
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowProfileMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const toggleDark = () => {
         const newDark = !isDark;
         setIsDark(newDark);
@@ -32,102 +45,80 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
         localStorage.setItem('theme', newDark ? 'dark' : 'light');
     };
 
-   
+    // Renderizado mientras carga el usuario
     if (isLoading) {
         return (
-            <header className="flex justify-between items-center px-4 py-3 bg-gray-100 text-black fixed top-0 left-0 w-full z-40 shadow-md dark:bg-gray-900 dark:text-white">
-                <div className="flex items-center">
-                    <button className="mr-3 focus:outline-none" disabled>
-                        <Menu size={24} />
-                    </button>
-                    <h1 className="text-xl font-bold">HortiTech</h1>
+            <header className="flex justify-between items-center px-6 py-3 bg-white fixed top-0 left-0 w-full z-40 shadow-sm border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800">
+                <div className="flex items-center gap-4">
+                    <button className="text-slate-500" disabled><Menu size={24} /></button>
+                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">HortiTech</h1>
                 </div>
-                <div>Loading...</div>
+                <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse"></div>
             </header>
         );
     }
-
-  
-    if (!user) {
-        return (
-            <header className="flex justify-between items-center px-4 py-3 bg-gray-100 text-black fixed top-0 left-0 w-full z-40 shadow-md dark:bg-gray-900 dark:text-white">
-                <div className="flex items-center">
-                    
-                    <button className="mr-3 focus:outline-none" onClick={toggleSidebar}>
-                        {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-                    </button>
-                    <h1 className="text-xl font-bold">HortiTech</h1>
-                </div>
-                <Link href="/login" className="text-green-600 hover:underline">Login</Link>
-            </header>
-        );
-    }
-
 
     return (
-        <header className="flex justify-between items-center px-4 py-3 bg-gray-100 text-black fixed top-0 left-0 w-full z-40 shadow-md dark:bg-gray-900 dark:text-white">
-            <div className="flex items-center">
-              
-                <button onClick={toggleSidebar} className="mr-3 focus:outline-none">
+        <header className="flex justify-between items-center px-6 py-3 bg-white fixed top-0 left-0 w-full z-40 shadow-sm border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800">
+            <div className="flex items-center gap-4">
+                <button onClick={toggleSidebar} className="text-slate-600 dark:text-slate-400 focus:outline-none">
                     {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
-                <h1 className="text-xl font-bold">HortiTech</h1>
+                <h1 className="text-xl font-bold text-slate-800 dark:text-white hidden sm:block">HortiTech</h1>
             </div>
 
-        
-            <div className="relative">
-                <div onClick={toggleProfileMenu} className="flex items-center space-x-3 cursor-pointer">
-                   
-                    <img
-                        src={user.foto_url || "/img/user.jpg"}
-                        alt="Profile"
-                      
-                        key={user.foto_url || "default-user-img"} 
-                        className="w-10 h-10 rounded-full border border-gray-400 object-cover"
-                    />
-                    <div className="text-right hidden md:block">
-                        <p className="font-semibold">{user.nombre_usuario || 'User'}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{user.rol || 'Unknown Role'}</p>
-                    </div>
-                </div>
-
-                {showProfileMenu && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white text-black dark:bg-gray-800 dark:text-white rounded-lg shadow-lg z-50 overflow-hidden">
-                     
-                        <div className="p-4 border-b dark:border-gray-700">
-                            <p className="font-semibold">{user.nombre_usuario}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">{user.rol}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{user.correo}</p>
+            {user ? (
+                <div className="relative" ref={menuRef}>
+                    <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center gap-3 cursor-pointer group">
+                        <Image
+                            src={user.foto_url || "/images/default-avatar.png"}
+                            alt="Foto de perfil"
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 rounded-full border-2 border-slate-200 object-cover"
+                        />
+                        <div className="text-right hidden md:block">
+                            <p className="font-semibold text-slate-800 dark:text-slate-200">{user.nombre_usuario || 'Usuario'}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">{user.rol || 'Rol Desconocido'}</p>
                         </div>
-                        <ul className="flex flex-col">
-                            <li
-                                onClick={toggleDark}
-                                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
-                            >
-                                {isDark ? <Sun size={16} /> : <Moon size={16} />}
-                                {isDark ? 'Light mode' : 'Dark mode'}
-                            </li>
-                            <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2">
-                                <UserIcon size={16} />
-                                <Link href={`/home/${user.rol}/configuraciones/perfil`}>View profile</Link>
-                            </li>
-                            <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2">
-                                <Settings size={16} />
-                                <Link href={`/home/${user.rol}/configuraciones`}>Settings</Link>
-                            </li>
-                            <li>
-                                <button
-                                    onClick={logout}
-                                    className="flex items-center w-full text-left px-4 py-2 hover:bg-red-100 dark:hover:bg-red-900 cursor-pointer flex items-center gap-2 text-red-600 dark:text-red-400"
-                                >
-                                    <LogOut size={16} />
-                                    Logout
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-            </div>
+                         <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {showProfileMenu && (
+                        <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg z-50 overflow-hidden border border-slate-200 dark:border-slate-700">
+                            <div className="p-4 border-b dark:border-slate-700">
+                                <p className="font-semibold text-slate-800 dark:text-white">{user.nombre_usuario}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">{user.correo}</p>
+                            </div>
+                            <ul className="flex flex-col text-slate-600 dark:text-slate-300">
+                                <li>
+                                    <Link href={`/home/${user.rol}/configuraciones/perfil`} className="px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/50 flex items-center gap-3">
+                                        <UserIcon size={16} /> Ver Perfil
+                                    </Link>
+                                </li>
+                                <li>
+                                     <Link href={`/home/${user.rol}/configuraciones`} className="px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/50 flex items-center gap-3">
+                                        <Settings size={16} /> Configuraciones
+                                    </Link>
+                                </li>
+                                <li onClick={toggleDark} className="px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/50 cursor-pointer flex items-center gap-3">
+                                    {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                                    {isDark ? 'Modo Claro' : 'Modo Oscuro'}
+                                </li>
+                                <li>
+                                    <button onClick={logout} className="w-full text-left px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-3 text-red-600 dark:text-red-400">
+                                        <LogOut size={16} /> Cerrar Sesión
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <Link href="/login" className="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors">
+                    Iniciar Sesión
+                </Link>
+            )}
         </header>
     );
 };
