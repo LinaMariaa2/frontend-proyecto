@@ -2,45 +2,64 @@
 
 import React from "react";
 import Link from "next/link";
-import { Droplet, Sun } from "lucide-react";
+import { Droplet, Sun, ArrowRight } from "lucide-react";
 
-interface DashboardCardProps {
+// --- Interfaz para las propiedades de la tarjeta ---
+interface EstadisticaCardProps {
   title: string;
+  description: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   href: string;
+  colorClass: string; // Para el gradiente del ícono
 }
 
-function DashboardCard({ title, icon: Icon, href }: DashboardCardProps) {
+// --- Componente de Tarjeta Rediseñado ---
+function EstadisticaCard({ title, description, icon: Icon, href, colorClass }: EstadisticaCardProps) {
   return (
     <Link
       href={href}
-      className="bg-white border border-gray-200 rounded-2xl p-9 flex flex-col items-center justify-center gap-4 shadow-md hover:shadow-xl transition-transform duration-300 transform hover:-translate-y-1 w-full max-w-xs mx-auto"
+      className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col group hover:border-teal-500/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
     >
-      <div className="w-25 h-24 rounded-full flex items-center justify-center bg-gray-100 shadow-inner">
-        <Icon className="w-10 h-10 text-gray-700" />
+      <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-4 ${colorClass}`}>
+        <Icon className="w-8 h-8 text-white" />
       </div>
-      <h2 className="text-xl font-semibold text-green-800 text-center">{title}</h2>
+      <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+      <p className="text-slate-500 mt-1 mb-6 flex-grow">{description}</p>
+      <div className="mt-auto font-semibold text-teal-600 flex items-center gap-2">
+        <span>Ver reporte</span>
+        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+      </div>
     </Link>
   );
 }
 
+// --- Componente Principal de la Página de Estadísticas ---
 export default function Estadisticas() {
   return (
-    <main className="bg-gray-50 min-h-screen py-14 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-4xl font-bold text-green-700 text-center mb-12">
-        Estadísticas
-      </h1>
+    <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
+      {/* Cabecera */}
+      <div className="mb-10">
+        <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">Estadísticas</h1>
+        <p className="text-lg text-slate-500 mt-1">
+          Analiza el rendimiento y consumo de tus invernaderos.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto">
-        <DashboardCard
-          title="Estadísticas de Riego"
+      {/* Grid de Tarjetas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
+        <EstadisticaCard
+          title="Consumo de Agua"
+          description="Visualiza datos históricos y en tiempo real sobre el uso de agua en los ciclos de riego."
           icon={Droplet}
           href="/home/operario/estadisticas/riego"
+          colorClass="bg-gradient-to-br from-sky-500 to-blue-600"
         />
-        <DashboardCard
-          title="Estadísticas de Iluminación"
+        <EstadisticaCard
+          title="Uso de Energía"
+          description="Monitorea el consumo energético de los sistemas de iluminación para optimizar costos."
           icon={Sun}
           href="/home/operario/estadisticas/iluminacion"
+          colorClass="bg-gradient-to-br from-amber-400 to-orange-500"
         />
       </div>
     </main>

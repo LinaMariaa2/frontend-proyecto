@@ -309,38 +309,37 @@ export default function BitacoraPage() {
             <p className="mt-4 text-slate-500">Cargando publicaciones...</p>
         </div>
       ) : filteredPublicaciones.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-3">
           {filteredPublicaciones.map((pub) => (
             <div
               key={pub.id_publicacion!}
-              className={`bg-white shadow-sm rounded-lg flex flex-col h-full border-l-4 transition-all hover:shadow-lg hover:-translate-y-1 ${
+              className={`bg-white shadow-sm rounded-lg p-4 flex gap-4 items-start border-l-4 transition-all hover:shadow-md ${
                 pub.importancia === 'alta' ? 'border-red-500' :
                 pub.importancia === 'media' ? 'border-amber-500' : 'border-sky-500'
               }`}
             >
-              <div className="p-5 flex-grow">
-                <div className="flex justify-between items-center mb-3">
+              <div className="flex-grow">
+                <div className="flex justify-between items-center mb-2">
                    <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
                      pub.importancia === 'alta' ? 'bg-red-100 text-red-700' :
                      pub.importancia === 'media' ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'
                    }`}>
                       {pub.tipo_evento}
                    </span>
-                   <span className="text-xs text-slate-500">{new Date(pub.timestamp_publicacion || '').toLocaleDateString('es-CO')}</span>
+                   <span className="text-xs text-slate-500">{new Date(pub.timestamp_publicacion || '').toLocaleString('es-CO')}</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 line-clamp-2">{pub.titulo}</h3>
-                <p className="text-sm text-slate-600 mt-1 line-clamp-3">{pub.contenido}</p>
+                <h3 className="text-lg font-bold text-slate-800">{pub.titulo}</h3>
+                <p className="text-sm text-slate-600 mt-1">{pub.contenido}</p>
+                <div className="text-xs text-slate-500 mt-3 border-t border-slate-200 pt-2 flex items-center gap-4">
+                    <span><strong>Autor:</strong> {pub.autor?.nombre_usuario || pub.autor_id}</span>
+                    <span><strong>Invernadero:</strong> {pub.invernadero?.nombre || pub.id_invernadero}</span>
+                    <span><strong>Zona:</strong> {pub.zona?.nombre || "N/A"}</span>
+                </div>
               </div>
-              <div className="px-5 pb-4 mt-auto">
-                <div className="text-xs text-slate-500 mt-3 border-t border-slate-100 pt-3">
-                    <p><strong>Autor:</strong> {pub.autor?.nombre_usuario || pub.autor_id}</p>
-                    <p><strong>Ubicación:</strong> {pub.invernadero?.nombre || pub.id_invernadero} / {pub.zona?.nombre || "N/A"}</p>
-                </div>
-                <div className="flex items-center justify-end gap-2 mt-4">
-                  <button onClick={() => abrirModal(pub)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Editar"><Pencil className="w-4 h-4" /></button>
-                  <button onClick={() => archivarPublicacion(pub.id_publicacion)} className="p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors" title="Archivar"><Archive className="w-4 h-4" /></button>
-                  <button onClick={() => eliminarPublicacion(pub.id_publicacion)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
-                </div>
+              <div className="flex items-center gap-2">
+                  <button onClick={() => abrirModal(pub)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={() => archivarPublicacion(pub.id_publicacion)} className="p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"><Archive className="w-4 h-4" /></button>
+                  <button onClick={() => eliminarPublicacion(pub.id_publicacion)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
           ))}

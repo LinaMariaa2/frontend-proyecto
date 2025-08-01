@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Settings, Package, BarChart2, BookText, LogOut, User as UserIcon, Users, Sprout } from 'lucide-react';
+import { Home, Settings, Package, BarChart2, BookText, LogOut, Sprout, Leaf } from 'lucide-react';
 import { useUser } from '@/app/context/UserContext';
 import Image from 'next/image';
 
@@ -38,8 +38,6 @@ const NavLink = ({ item, isOpen, isActive }: NavItemProps) => (
     </Link>
 );
 
-
-
 // --- Componente Principal del Sidebar ---
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     const pathname = usePathname();
@@ -73,8 +71,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
 
     return (
         <aside className={`fixed top-0 left-0 h-screen bg-white border-r border-slate-200 transition-all duration-300 z-30 dark:bg-slate-900 dark:border-slate-800 flex flex-col ${isOpen ? 'w-64' : 'w-20'}`}>
+            {/* CAMBIO: Se elimina el perfil y se añade un logo/título */}
+            <div className={`flex items-center gap-3 h-16 border-b border-slate-200 dark:border-slate-800 px-6 ${!isOpen && 'justify-center px-0'}`}>
+                <Leaf className="w-7 h-7 text-teal-600 flex-shrink-0"/>
+                {isOpen && <h1 className="text-xl font-bold text-slate-800 dark:text-white">HortiTech</h1>}
+            </div>
 
-            <nav className="flex-grow flex flex-col space-y-2 p-4 text-slate-700 dark:text-slate-300">
+            {/* CAMBIO: Aumentado el espaciado vertical con space-y-3 */}
+            <nav className="flex-grow flex flex-col space-y-3 p-4 text-slate-700 dark:text-slate-300">
                 {navItems.map((item) => (
                     <NavLink
                         key={item.name}
