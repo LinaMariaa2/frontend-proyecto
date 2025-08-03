@@ -50,15 +50,15 @@ const StatusBadge = ({ estado }: { estado: string }) => {
 
 const ZonaChart = ({ data, idealRange, dataKey, name, unit, color }) => (
     <div className="mt-4">
-        <h4 className="text-xs font-semibold text-slate-500 mb-2">{name} Reciente ({unit})</h4>
-        <ResponsiveContainer width="100%" height={120}>
-            <LineChart data={data} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+        <h4 className="text-sm font-semibold text-slate-600 mb-2">{name} Reciente ({unit})</h4>
+        <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="tiempo" tick={{ fill: '#64748b', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 11 }} domain={[idealRange.min - 10, idealRange.max + 10]}/>
-                <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', fontSize: '12px' }}/>
-                <ReferenceArea y1={idealRange.min} y2={idealRange.max} fill={color} fillOpacity={0.1} label={{ value: "Ideal", position: "insideTopRight", fill: "#94a3b8", fontSize: 10 }} />
-                <Line type="monotone" dataKey={dataKey} name={name} stroke={color} strokeWidth={2} dot={{ r: 4 }} />
+                <XAxis dataKey="tiempo" tick={{ fill: '#64748b', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} domain={[idealRange.min - 5, idealRange.max + 5]}/>
+                <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.75rem', fontSize: '13px' }}/>
+                <ReferenceArea y1={idealRange.min} y2={idealRange.max} fill={color} fillOpacity={0.1} label={{ value: "Rango Ideal", position: "insideTopRight", fill: "#94a3b8", fontSize: 11, dy: 10 }} />
+                <Line type="monotone" dataKey={dataKey} name={name} stroke={color} strokeWidth={2.5} dot={{ r: 5 }} activeDot={{ r: 7 }} />
             </LineChart>
         </ResponsiveContainer>
     </div>
@@ -102,10 +102,6 @@ export default function ZonasOperarioPage() {
       { tiempo: "30m", humedad_actual: 55 }, { tiempo: "20m", humedad_actual: 52 },
       { tiempo: "10m", humedad_actual: 50 }, { tiempo: "Ahora", humedad_actual: 48 },
   ];
-  const tempData = [
-      { tiempo: "30m", temperatura_actual: 25 }, { tiempo: "20m", temperatura_actual: 26 },
-      { tiempo: "10m", temperatura_actual: 25 }, { tiempo: "Ahora", temperatura_actual: 24 },
-  ];
 
   return (
     <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
@@ -138,7 +134,6 @@ export default function ZonasOperarioPage() {
                         <span className="text-sm text-slate-600"><strong>Cultivo:</strong> {obtenerNombreCultivo(zona.id_cultivo)}</span>
                     </div>
                     <ZonaChart data={humidityData} idealRange={{min: 50, max: 65}} dataKey="humedad_actual" name="Humedad" unit="%" color="#3b82f6" />
-                    <ZonaChart data={tempData} idealRange={{min: 22, max: 30}} dataKey="temperatura_actual" name="Temperatura" unit="°C" color="#f97316" />
                 </div>
                 <div className="mt-auto border-t border-slate-200 bg-slate-50 p-3 grid grid-cols-2 gap-3">
                     <Link href={`/home/operario/invernaderos/zonas/programacion-riego?id=${zona.id_zona}`} className="text-sm text-center font-semibold bg-blue-100 text-blue-800 px-3 py-2 rounded-md hover:bg-blue-200 flex items-center justify-center gap-1.5"><Droplets className="w-4 h-4"/> Riego</Link>
