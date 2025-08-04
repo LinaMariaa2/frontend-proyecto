@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import api from '@/app/services/api';
 import { useUser } from '@/app/context/UserContext';
-// --- CAMBIO: Se importan iconos para el toggle de contraseña
 import { Mail, Lock, LogIn, LoaderCircle, ShieldAlert, Eye, EyeOff, UserSquare } from 'lucide-react';
 
 export default function LoginPage() {
@@ -15,13 +14,11 @@ export default function LoginPage() {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    // --- CAMBIO: Se restaura el estado del rol
     const [role, setRole] = useState('admin'); 
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [generalError, setGeneralError] = useState(''); 
     const [loading, setLoading] = useState(false);
-    // --- CAMBIO: Nuevo estado para la visibilidad de la contraseña
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -47,7 +44,7 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const response = await api.post('/auth/login', {
+            const response = await api.post('/api/auth/login', {
                 correo: email,
                 contrasena: password,
             });
@@ -71,12 +68,11 @@ export default function LoginPage() {
         }
     };
 
-    // --- CAMBIO: La estructura visual vuelve a ser de una sola columna centrada
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 font-sans">
             <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl">
                 <div className="text-center mb-8">
-                     <Image
+                    <Image
                         src="/images/logo-black-3.svg"
                         alt="Logo de Hotitech"
                         width={150}
@@ -119,19 +115,16 @@ export default function LoginPage() {
                         <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
                             Contraseña
                         </label>
-                         <div className="relative">
+                        <div className="relative">
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                             <input
                                 id="password"
-                                // --- CAMBIO: El tipo de input depende del estado
                                 type={showPassword ? "text" : "password"}
                                 placeholder="••••••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                // --- CAMBIO: Padding derecho para no superponer el icono
                                 className="w-full border border-slate-300 p-3 pl-10 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                             />
-                            {/* --- CAMBIO: Botón para mostrar/ocultar contraseña --- */}
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
@@ -139,7 +132,7 @@ export default function LoginPage() {
                             >
                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
-                         </div>
+                        </div>
                         {passwordError && <p className="text-red-500 text-sm mt-1">{passwordError}</p>}
                     </div>
 
