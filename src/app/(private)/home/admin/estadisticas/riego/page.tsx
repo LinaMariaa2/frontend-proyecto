@@ -16,8 +16,6 @@ import {
 import { Droplets, Sun, Leaf, AlertCircle, X } from "lucide-react";
 import { FaClock } from "react-icons/fa";
 
-// Asumimos que las interfaces para los datos de la API se mantienen.
-// Si tu API retorna datos diferentes, estas interfaces deben ajustarse.
 interface Invernadero {
   id_invernadero: number;
   nombre: string;
@@ -27,17 +25,6 @@ interface Zona {
   id_zona: number;
   nombre: string;
 }
-
-// Datos simulados para demostración.
-// Estos datos deberían ser reemplazados por llamadas a la API reales en un entorno de producción.
-const resumenMockData = {
-  invernaderosActivos: 3,
-  totalInvernaderos: 5,
-  zonasActivas: 10,
-  totalZonas: 15,
-  riegosHoy: 5,
-  iluminacionActiva: 2,
-};
 
 const datosRiegoMockData = {
   Dia: [
@@ -79,7 +66,6 @@ const sensorDataMockData = [
   { icon: <FaClock size={20} className="text-emerald-500" />, titulo: "Tiempo de Riego Diario", valor: "2 h", descripcion: "Tiempo total acumulado hoy." },
 ];
 
-// Componente de Card reusable.
 function Card({
   title,
   value,
@@ -103,7 +89,6 @@ function Card({
   );
 }
 
-// Componente SensorCard reusable.
 function SensorCard({ icon, titulo, valor, descripcion }: { icon: React.ReactNode; titulo: string; valor: string; descripcion: string }) {
   return (
     <div className="bg-gray-100 border border-gray-200 p-4 rounded-xl shadow-sm flex gap-4 items-start">
@@ -117,7 +102,6 @@ function SensorCard({ icon, titulo, valor, descripcion }: { icon: React.ReactNod
   );
 }
 
-// Componente ModalContent genérico y mejorado.
 interface ModalContentProps {
   title: string;
   data: Invernadero[] | Zona[];
@@ -144,88 +128,108 @@ function ModalContent({ title, data, dataType, isLoading }: ModalContentProps) {
   );
 }
 
-// Componente Principal de la Aplicación
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+
 const App = () => {
-  // Estado para el filtro del gráfico de línea
   const [filtro, setFiltro] = useState<"Dia" | "Semana" | "Mes">("Dia");
-  // Estados para controlar el modal
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalData, setModalData] = useState<Invernadero[] | Zona[]>([]);
   const [modalDataType, setModalDataType] = useState<'invernaderos' | 'zonas'>('invernaderos');
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [invernaderosActivosCount, setInvernaderosActivosCount] = useState(0);
+  const [zonasActivasCount, setZonasActivasCount] = useState(0);
 
-  // Función para obtener invernaderos activos (usando datos mock para este ejemplo)
-  const fetchInvernaderosActivos = () => {
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const invernaderosRes = await fetch(`${BACKEND_URL}/api/invernadero/datos-activos`);
+        if (invernaderosRes.ok) {
+          const invernaderos = await invernaderosRes.json();
+          setInvernaderosActivosCount(invernaderos.length);
+        }
+        
+        const zonasRes = await fetch(`${BACKEND_URL}/api/zona/datos-activos`);
+        if (zonasRes.ok) {
+          const zonas = await zonasRes.json();
+          setZonasActivasCount(zonas.length);
+        }
+      } catch (error) {
+        console.error('Error al obtener los conteos:', error);
+      }
+    };
+    fetchCounts();
+  }, []);
+
+  const fetchInvernaderosActivos = async () => {
     setIsLoading(true);
     setModalTitle("Invernaderos Activos");
     setModalDataType('invernaderos');
     setShowModal(true);
-    // Simular un retraso de red
-    setTimeout(() => {
-      // Usar datos mock, pero aquí iría tu llamada a la API
-      const data: Invernadero[] = [
-        { id_invernadero: 1, nombre: "Invernadero A" },
-        { id_invernadero: 2, nombre: "Invernadero B" },
-        { id_invernadero: 3, nombre: "Invernadero C" },
-      ];
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/invernadero/datos-activos`);
+      if (!res.ok) {
+        throw new Error("Error al obtener los invernaderos activos");
+      }
+      const data: Invernadero[] = await res.json();
       setModalData(data);
+    } catch (error) {
+      console.error('Error al obtener invernaderos:', error);
+      setModalData([]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  // Función para obtener zonas activas (usando datos mock para este ejemplo)
-  const fetchZonasActivas = () => {
+  const fetchZonasActivas = async () => {
     setIsLoading(true);
     setModalTitle("Zonas Activas");
     setModalDataType('zonas');
     setShowModal(true);
-    // Simular un retraso de red
-    setTimeout(() => {
-      // Usar datos mock, pero aquí iría tu llamada a la API
-      const data: Zona[] = [
-        { id_zona: 1, nombre: "Zona 1" },
-        { id_zona: 2, nombre: "Zona 2" },
-        { id_zona: 3, nombre: "Zona 3" },
-        { id_zona: 4, nombre: "Zona 4" },
-        { id_zona: 5, nombre: "Zona 5" },
-      ];
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/zona/datos-activos`);
+      if (!res.ok) {
+        throw new Error("Error al obtener las zonas activas");
+      }
+      const data: Zona[] = await res.json();
       setModalData(data);
+    } catch (error) {
+      console.error('Error al obtener zonas:', error);
+      setModalData([]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  // Se filtran los datos de riego según el estado del filtro.
   const datosFiltrados = datosRiegoMockData[filtro];
 
   return (
     <div className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen space-y-8 transition-all duration-300 font-sans">
       <h1 className="text-3xl font-bold mb-4 text-gray-800">Estadísticas de Riego</h1>
 
-      {/* Sección de Cards de Resumen */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         <Card
           icon={<Leaf size={20} />}
           title="Invernaderos Activos"
-          value={`${resumenMockData.invernaderosActivos} / ${resumenMockData.totalInvernaderos}`}
+          value={invernaderosActivosCount}
           onClick={fetchInvernaderosActivos}
         />
         <Card
           icon={<Droplets size={20} />}
           title="Zonas Activas"
-          value={`${resumenMockData.zonasActivas} / ${resumenMockData.totalZonas}`}
+          value={zonasActivasCount}
           onClick={fetchZonasActivas}
         />
         <Card
           icon={<Droplets size={20} />}
           title="Riegos Hoy"
-          value={resumenMockData.riegosHoy}
-          onClick={() => {}} // Se puede agregar una lógica similar para mostrar detalles
+          value={5}
+          onClick={() => {}}
         />
         <Card icon={<AlertCircle size={20} />} title="Alertas Activas" value="0" />
       </div>
 
-      {/* Sección del Gráfico de Línea */}
       <div className="bg-white shadow-lg rounded-xl p-5">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-semibold text-xl text-gray-800">Historial de Riegos</h2>
@@ -251,7 +255,6 @@ const App = () => {
         </ResponsiveContainer>
       </div>
 
-      {/* Sección de Gráfico de Pie y Tabla de Historial */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white shadow-lg rounded-xl p-6">
           <h2 className="font-semibold text-xl mb-4 text-gray-800">Estado de Zonas</h2>
@@ -304,7 +307,6 @@ const App = () => {
         </div>
       </div>
 
-      {/* Sección de Sensores */}
       <div className="bg-white shadow-lg rounded-xl p-6">
         <h2 className="font-semibold text-xl mb-4 text-gray-800">Lecturas en Tiempo Real</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 text-sm">
@@ -314,7 +316,6 @@ const App = () => {
         </div>
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg relative">

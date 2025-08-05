@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -14,20 +14,21 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Sun, Droplets, Leaf, AlertCircle } from "lucide-react";
+import { Droplets, Leaf, AlertCircle, Sun } from "lucide-react";
+import { FaClock } from "react-icons/fa";
+import { X } from "lucide-react";
 
-// Datos resumen
-//falta integracion
-const resumen = {
-  invernaderosActivos: 3,
-  totalInvernaderos: 5,
-  zonasActivas: 10,
-  totalZonas: 15,
-  iluminacionesHoy: 4,
-  iluminacionActiva: 2,
-};
+interface Invernadero {
+  id_invernadero: number;
+  nombre: string;
+}
 
-// Datos de iluminación
+interface Zona {
+  id_zona: number;
+  nombre: string;
+}
+
+// ... (datos de simulación y colores, que pueden quedarse como están) ...
 const datosIluminacion = {
   Dia: [
     { dia: "Lun", iluminacion: 3 },
@@ -48,31 +49,98 @@ const datosIluminacion = {
   ],
 };
 
-// Estado de zonas
 const zonasEstado = [
   { nombre: "Activas", valor: 10 },
   { nombre: "Inactivas", valor: 3 },
   { nombre: "Mantenimiento", valor: 2 },
 ];
 
-// Colores para pie chart en tonos de amarillo y naranja suave
 const coloresPie = ["#fd8b08ff", "#f0fc4dff", "#fbbf24"];
 
-// Historial de iluminación
 const historial = [
   { fecha: "20/07", invernadero: "Inv-1", zona: "Zona 1", tipo: "Iluminación", accion: "Encendido", estado: "Completado" },
   { fecha: "20/07", invernadero: "Inv-2", zona: "Zona 2", tipo: "Iluminación", accion: "Apagado", estado: "Pendiente" },
   { fecha: "19/07", invernadero: "Inv-3", zona: "Zona 3", tipo: "Iluminación", accion: "Encendido", estado: "OK" },
 ];
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+
 export default function EstadisticasIluminacion() {
   const [filtro, setFiltro] = useState<"Dia" | "Semana" | "Mes">("Dia");
-  const [modalContent, setModalContent] = useState<React.ReactNode | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalData, setModalData] = useState<Invernadero[] | Zona[]>([]);
+  const [modalDataType, setModalDataType] = useState<'invernaderos' | 'zonas'>('invernaderos');
+  const [isLoading, setIsLoading] = useState(false);
+  const [invernaderosActivosCount, setInvernaderosActivosCount] = useState(0);
+  const [zonasActivasCount, setZonasActivasCount] = useState(0);
 
-  const openModal = (content: React.ReactNode) => {
-    setModalContent(content);
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        // 👉 Cambiamos las llamadas a los endpoints de iluminación por las de riego
+        // const invernaderosRes = await fetch(`${BACKEND_URL}/api/iluminacion/invernaderos-activos`);
+        const invernaderosRes = await fetch(`${BACKEND_URL}/api/invernadero/datos-activos`);
+        if (invernaderosRes.ok) {
+          const invernaderos = await invernaderosRes.json();
+          setInvernaderosActivosCount(invernaderos.length);
+        }
+        
+        // const zonasRes = await fetch(`${BACKEND_URL}/api/iluminacion/zonas-activas`);
+        const zonasRes = await fetch(`${BACKEND_URL}/api/zona/datos-activos`);
+        if (zonasRes.ok) {
+          const zonas = await zonasRes.json();
+          setZonasActivasCount(zonas.length);
+        }
+      } catch (error) {
+        console.error('Error al obtener los conteos de activos:', error);
+      }
+    };
+    fetchCounts();
+  }, []);
+
+  const fetchInvernaderosActivos = async () => {
+    setIsLoading(true);
+    setModalTitle("Invernaderos Activos");
+    setModalDataType('invernaderos');
     setShowModal(true);
+    try {
+      // 👉 Cambiamos la llamada al endpoint de iluminación por el de invernaderos activos
+      // const res = await fetch(`${BACKEND_URL}/api/iluminacion/invernaderos-activos`);
+      const res = await fetch(`${BACKEND_URL}/api/invernadero/datos-activos`);
+      if (!res.ok) {
+        throw new Error("Error al obtener los invernaderos activos");
+      }
+      const data: Invernadero[] = await res.json();
+      setModalData(data);
+    } catch (error) {
+      console.error('Error al obtener invernaderos:', error);
+      setModalData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchZonasActivas = async () => {
+    setIsLoading(true);
+    setModalTitle("Zonas Activas");
+    setModalDataType('zonas');
+    setShowModal(true);
+    try {
+      // 👉 Cambiamos la llamada al endpoint de iluminación por el de zonas activas
+      // const res = await fetch(`${BACKEND_URL}/api/iluminacion/zonas-activas`);
+      const res = await fetch(`${BACKEND_URL}/api/zona/datos-activos`);
+      if (!res.ok) {
+        throw new Error("Error al obtener las zonas activas");
+      }
+      const data: Zona[] = await res.json();
+      setModalData(data);
+    } catch (error) {
+      console.error('Error al obtener zonas:', error);
+      setModalData([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const datosFiltrados = datosIluminacion[filtro];
@@ -80,48 +148,28 @@ export default function EstadisticasIluminacion() {
   return (
     <div className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen space-y-8 transition-all duration-300">
       <h1 className="text-3xl font-bold mb-4">Estadísticas de Iluminación</h1>
-
-      {/* Cards resumen */}
+      
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
         <Card
           icon={<Leaf size={20} />}
-          title="Invernaderos Activos"
-          value={`${resumen.invernaderosActivos} / ${resumen.totalInvernaderos}`}
-          onClick={() => openModal(<ModalContent title="Invernaderos Activos" items={["Inv-1", "Inv-2", "Inv-3"]} />)}
+          title="Invernaderos Activos" // 👉 Título corregido
+          value={invernaderosActivosCount}
+          onClick={fetchInvernaderosActivos} // 👉 Función corregida
         />
         <Card
-          icon={<Droplets size={20} />}
-          title="Zonas Activas"
-          value={`${resumen.zonasActivas} / ${resumen.totalZonas}`}
-          onClick={() =>
-            openModal(
-              <ModalContent
-                title="Zonas Activas"
-                items={[
-                  "Zona 1", "Zona 3", "Zona 4", "Zona 5", "Zona 6",
-                  "Zona 7", "Zona 8", "Zona 9", "Zona 10", "Zona 11",
-                ]}
-              />
-            )
-          }
+          icon={<Droplets size={20} />} // 👉 Icono de agua (similar al de riego)
+          title="Zonas Activas" // 👉 Título corregido
+          value={zonasActivasCount}
+          onClick={fetchZonasActivas} // 👉 Función corregida
         />
         <Card
           icon={<Sun size={20} />}
           title="Iluminaciones Hoy"
-          value={resumen.iluminacionesHoy}
-          onClick={() =>
-            openModal(
-              <ModalContent
-                title="Iluminaciones de Hoy"
-                items={["Inv-1 / Zona 1", "Inv-2 / Zona 2", "Inv-3 / Zona 3", "Inv-1 / Zona 4"]}
-              />
-            )
-          }
+          value={4}
         />
         <Card icon={<AlertCircle size={20} />} title="Alertas Activas" value="0" />
       </div>
 
-      {/* Línea de historial */}
       <div className="bg-white shadow rounded-xl p-5">
         <div className="flex justify-between items-center mb-6">
           <h2 className="font-semibold text-xl ">Historial de Iluminación</h2>
@@ -145,7 +193,7 @@ export default function EstadisticasIluminacion() {
             <Line
               type="monotone"
               dataKey="iluminacion"
-              stroke="#facc15e1" // amarillo fuerte
+              stroke="#facc15e1"
               strokeWidth={3}
               dot={{ r: 5 }}
             />
@@ -153,7 +201,6 @@ export default function EstadisticasIluminacion() {
         </ResponsiveContainer>
       </div>
 
-      {/* Pie chart y tabla */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white shadow rounded-xl p-6">
           <h2 className="font-semibold text-xl mb-4 ">Estado de Zonas</h2>
@@ -198,7 +245,6 @@ export default function EstadisticasIluminacion() {
         </div>
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg relative">
@@ -206,9 +252,9 @@ export default function EstadisticasIluminacion() {
               className="absolute top-4 right-4 text-gray-500 text-xl"
               onClick={() => setShowModal(false)}
             >
-              ✕
+              <X size={24} />
             </button>
-            {modalContent}
+            <ModalContent title={modalTitle} data={modalData} dataType={modalDataType} isLoading={isLoading} />
           </div>
         </div>
       )}
@@ -216,7 +262,7 @@ export default function EstadisticasIluminacion() {
   );
 }
 
-// Card component
+// Componentes auxiliares
 function Card({
   title,
   value,
@@ -240,16 +286,28 @@ function Card({
   );
 }
 
-// ModalContent
-function ModalContent({ title, items }: { title: string; items: string[] }) {
+interface ModalContentProps {
+  title: string;
+  data: Invernadero[] | Zona[];
+  dataType: 'invernaderos' | 'zonas';
+  isLoading: boolean;
+}
+
+function ModalContent({ title, data, dataType, isLoading }: ModalContentProps) {
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4">{title}</h2>
-      <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
-        {items.map((item, idx) => (
-          <li key={idx}>{item}</li>
-        ))}
-      </ul>
+      <h2 className="text-lg font-semibold mb-4 text-slate-800">{title}</h2>
+      {isLoading ? (
+        <p className="text-center text-gray-500 py-4">Cargando...</p>
+      ) : data.length > 0 ? (
+        <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700">
+          {data.map((item: any, idx) => (
+            <li key={idx} className="bg-gray-50 p-2 rounded-lg">{item.nombre}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-center text-gray-500 py-4">No hay {dataType} activos.</p>
+      )}
     </div>
   );
 }
