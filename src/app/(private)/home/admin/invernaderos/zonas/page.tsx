@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import axios from "axios";
-import { useRef } from "react";
-import { PencilIcon } from "@heroicons/react/24/outline";
 import {
   LineChart,
   Line,
@@ -15,14 +13,34 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceArea,
 } from "recharts";
+import {
+  Plus,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  X,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Loader2,
+  Check,
+  CircleDot,
+  Wrench,
+  ChevronRight,
+  Droplets,
+  Sun,
+  Sprout,
+  Info,
+  ArrowLeft
+} from "lucide-react";
 
+// --- Interfaces ---
 interface Zona {
   id_zona: number;
   nombre: string;
   descripciones_add: string;
-  estado: string;
+  estado: "activo" | "inactivo" | "mantenimiento";
   id_cultivo?: string | null;
 }
 
@@ -31,535 +49,314 @@ interface Cultivo {
   nombre_cultivo: string;
 }
 
+const formInicial = { nombre: "", descripciones_add: "", id_cultivo: "" };
+
+// --- Modales Personalizados ---
+const ConfirmModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirmar", variant = "default" }) => (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+            {variant === 'danger' ? <AlertTriangle className="w-16 h-16 mx-auto text-red-500 mb-4" /> : <Info className="w-16 h-16 mx-auto text-amber-500 mb-4" />}
+            <h3 className="text-xl font-bold text-slate-800 mb-2">{title}</h3>
+            <p className="text-slate-500 mb-8" dangerouslySetInnerHTML={{ __html: message }}></p>
+            <div className="flex justify-center gap-4">
+                <button onClick={onCancel} className="px-6 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-colors">Cancelar</button>
+                <button onClick={onConfirm} className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors ${variant === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-teal-600 hover:bg-teal-700'}`}>{confirmText}</button>
+            </div>
+        </div>
+    </div>
+);
+
+const MessageModal = ({ title, message, onCerrar, success = true }) => (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+            {success ? <CheckCircle2 className="w-16 h-16 mx-auto text-teal-500 mb-4" /> : <XCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />}
+            <h3 className="text-xl font-bold text-slate-800 mb-4">{title}</h3>
+            <p className="text-slate-500 mb-8">{message}</p>
+            <button onClick={onCerrar} className="w-full px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors">Entendido</button>
+        </div>
+    </div>
+);
+
+// --- Componente de Gráfica Reutilizable ---
+const ZonaChart = () => {
+  const data = [
+    { name: "30m", Ideal: 65, Actual: 55 },
+    { name: "20m", Ideal: 65, Actual: 52 },
+    { name: "10m", Ideal: 65, Actual: 50 },
+    { name: "Ahora", Ideal: 65, Actual: 48 },
+  ];
+
+  return (
+    <div className="mt-4">
+        <h4 className="text-xs font-semibold text-slate-500 mb-2">Humedad Reciente (%)</h4>
+        {/* CAMBIO: Aumentada la altura del gráfico */}
+        <ResponsiveContainer width="100%" height={160}>
+            <LineChart data={data} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} domain={[40, 80]} />
+                <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', fontSize: '13px' }}/>
+                <Legend wrapperStyle={{fontSize: "13px"}}/>
+                <Line type="monotone" dataKey="Ideal" stroke="#a7f3d0" strokeWidth={3} dot={false} />
+                <Line type="monotone" dataKey="Actual" stroke="#14b8a6" strokeWidth={3} dot={{ r: 5 }} />
+            </LineChart>
+        </ResponsiveContainer>
+    </div>
+  );
+};
+
+
 export default function ZonasPage() {
   const searchParams = useSearchParams();
-  const id_invernadero = searchParams.get("id_invernadero") || "1";
+  const id_invernadero = searchParams.get("id_invernadero");
 
   const [zonas, setZonas] = useState<Zona[]>([]);
-  const [zonaEditando, setZonaEditando] = useState<Zona | null>(null);
-  const [zonaAEliminar, setZonaAEliminar] = useState<Zona | null>(null);
-  const [form, setForm] = useState({
-    nombre: "",
-    descripciones_add: "",
-    id_cultivo: "",
-  });
-  const [modalOpen, setModalOpen] = useState(false);
-  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
-  const [errorModalOpen, setErrorModalOpen] = useState(false);
-  const [errorMensaje, setErrorMensaje] = useState("");
   const [cultivosDisponibles, setCultivosDisponibles] = useState<Cultivo[]>([]);
-  const [alertaZonaActiva, setAlertaZonaActiva] = useState(false);
-  const [zonaBloqueada, setZonaBloqueada] = useState<Zona | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  const getColorEstado = (estado: string) => {
-    switch (estado) {
-      case "activo":
-        return "text-green-600";
-      case "inactivo":
-        return "text-gray-500";
-      case "mantenimiento":
-        return "text-yellow-600";
-      default:
-        return "text-gray-700";
-    }
-  };
+  const [form, setForm] = useState(formInicial);
+  
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editando, setEditando] = useState<Zona | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
+  
+  const [modalConfirm, setModalConfirm] = useState<{ show: boolean; onConfirm: () => void; title: string; message: string; confirmText: string, variant: string }>({ show: false, onConfirm: () => {}, title: '', message: '', confirmText: 'Confirmar', variant: 'default' });
+  const [modalMessage, setModalMessage] = useState<{ show: boolean; title: string; message: string; success: boolean }>({ show: false, title: '', message: '', success: true });
+  
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchZonas = async () => {
+    const fetchData = async () => {
+      if (!id_invernadero) return;
+      setCargando(true);
       try {
-        const res = await axios.get(`http://localhost:4000/api/zona/invernadero/${id_invernadero}`);
-        setZonas(res.data);
+        const [zonasRes, cultivosRes] = await Promise.all([
+          axios.get(`http://localhost:4000/api/zona/invernadero/${id_invernadero}`),
+          axios.get("http://localhost:4000/api/cultivos")
+        ]);
+        setZonas(zonasRes.data);
+        setCultivosDisponibles(cultivosRes.data);
       } catch (error) {
-        console.error("Error al cargar zonas:", error);
+        console.error("Error al cargar datos:", error);
+        setModalMessage({ show: true, success: false, title: "Error de Carga", message: "No se pudieron obtener los datos de las zonas o cultivos." });
+      } finally {
+        setCargando(false);
       }
     };
-    fetchZonas();
+    fetchData();
   }, [id_invernadero]);
-
+  
   useEffect(() => {
-    const fetchCultivos = async () => {
-      try {
-        const res = await axios.get("http://localhost:4000/api/cultivos");
-        setCultivosDisponibles(res.data);
-      } catch (error) {
-        console.error("Error al cargar cultivos:", error);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpenId(null);
       }
     };
-    fetchCultivos();
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-      setMenuOpenId(null); // Cierra el menú si haces clic fuera
+
+  const abrirModal = (zona: Zona | null = null) => {
+    if (zona) {
+        setEditando(zona);
+        setForm({
+            nombre: zona.nombre,
+            descripciones_add: zona.descripciones_add,
+            id_cultivo: zona.id_cultivo || "",
+        });
+    } else {
+        setEditando(null);
+        setForm(formInicial);
     }
-  };
-
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
-  };
-}, []);
-
-  const obtenerNombreCultivo = (id_cultivo: string | null | undefined) => {
-    const cultivo = cultivosDisponibles.find((c) => c.id_cultivo === Number(id_cultivo));
-    return cultivo ? cultivo.nombre_cultivo : "Sin cultivo asignado";
-  };
-
-  const crearZona = async () => {
-    try {
-        const nueva = {
-          nombre: form.nombre.trim(),
-          descripciones_add: form.descripciones_add.trim(),
-          id_cultivo: form.id_cultivo ? Number(form.id_cultivo) : null,
-          id_invernadero: Number(id_invernadero),
-          estado: "activo",
-        };
-
-
-      if (!nueva.nombre || !nueva.descripciones_add) {
-        setErrorMensaje("Todos los campos deben estar completos.");
-        setErrorModalOpen(true);
-        return;
-      }
-
-      const res = await axios.post("http://localhost:4000/api/zona", nueva);
-      const zonaCreada = res.data.zona;
-      setZonas((prev) => [...prev, zonaCreada]);
-
-      setForm({ nombre: "", descripciones_add: "", id_cultivo: "" });
-      setModalOpen(false);
-    } catch (error: any) {
-      setErrorMensaje(error.response?.data?.error || "Error al crear zona.");
-      setErrorModalOpen(true);
-    }
-  };
-
-  const manejarError = (error: any) => {
-    const mensaje = error.response?.data?.error || 'Ocurrió un error inesperado al cambiar el estado';
-    setErrorMensaje(mensaje);
-    setErrorModalOpen(true);
-    console.error("Error al cambiar estado:", error);
-  };
-
-  const activarZona = async (id: number) => {
-    try {
-      await axios.patch(`http://localhost:4000/api/zona/activar/${id}`);
-      setZonas((prev) => prev.map((z) => (z.id_zona === id ? { ...z, estado: "activo" } : z)));
-      setMenuOpenId(null);
-    } catch (error) {
-      manejarError(error);
-    }
-  };
-
-  const inactivarZona = async (id: number) => {
-    try {
-      await axios.patch(`http://localhost:4000/api/zona/inactivar/${id}`);
-      setZonas((prev) => prev.map((z) => (z.id_zona === id ? { ...z, estado: "inactivo" } : z)));
-      setMenuOpenId(null);
-    } catch (error) {
-      manejarError(error);
-    }
-  };
-
-  const mantenimientoZona = async (id: number) => {
-    try {
-      await axios.patch(`http://localhost:4000/api/zona/mantenimiento/${id}`);
-      setZonas((prev) => prev.map((z) => (z.id_zona === id ? { ...z, estado: "mantenimiento" } : z)));
-      setMenuOpenId(null);
-    } catch (error) {
-      manejarError(error);
-    }
-  };
-
-  const eliminarZonaConfirmada = async () => {
-  if (!zonaAEliminar) return;
-
-  if (zonaAEliminar.estado !== "inactivo") {
-    setAlertaZonaActiva(true);
-    return; // 🔴 Detiene el flujo aquí
+    setModalOpen(true);
   }
 
-  try {
-    await axios.delete(`http://localhost:4000/api/zona/${zonaAEliminar.id_zona}`);
-    setZonas((prev) => prev.filter((z) => z.id_zona !== zonaAEliminar.id_zona));
-    setZonaAEliminar(null);
-    setMenuOpenId(null);
-  } catch (error) {
-    console.error("❌ Error al eliminar zona:", error);
-  }
-};
+  const handleFormSubmit = async () => {
+    if (!form.nombre.trim() || !form.descripciones_add.trim()) {
+      setModalMessage({ show: true, success: false, title: "Campos Incompletos", message: "El nombre y la descripción son obligatorios." });
+      return;
+    }
+    setGuardando(true);
 
-
-  const guardarEdicion = async () => {
-    if (!zonaEditando) return;
+    const payload = {
+        nombre: form.nombre.trim(),
+        descripciones_add: form.descripciones_add.trim(),
+        id_cultivo: form.id_cultivo ? Number(form.id_cultivo) : null,
+        id_invernadero: Number(id_invernadero),
+        estado: editando ? editando.estado : "activo",
+    };
 
     try {
-      const payload = {
-  nombre: zonaEditando.nombre.trim(),
-  descripciones_add: zonaEditando.descripciones_add.trim(),
-  estado: zonaEditando.estado,
-  id_cultivo: zonaEditando.id_cultivo ? Number(zonaEditando.id_cultivo) : null,
-  id_invernadero: Number(id_invernadero),
-};
-
-    
-
-      if (!payload.nombre || !payload.descripciones_add) {
-        setErrorMensaje("Todos los campos deben estar completos para guardar.");
-        setErrorModalOpen(true);
-        return;
-      }
-
-      const res = await axios.put(`http://localhost:4000/api/zona/${zonaEditando.id_zona}`, payload);
-
-      setZonas((prev) =>
-        prev.map((z) => (z.id_zona === zonaEditando.id_zona ? { ...zonaEditando } : z))
-      );
-
-      setZonaEditando(null);
+        let res;
+        if(editando){
+            res = await axios.put(`http://localhost:4000/api/zona/${editando.id_zona}`, payload);
+            setZonas(zonas.map(z => z.id_zona === editando.id_zona ? res.data : z));
+        } else {
+            res = await axios.post("http://localhost:4000/api/zona", payload);
+            setZonas([...zonas, res.data.zona]);
+        }
+        setModalOpen(false);
+        setModalMessage({ show: true, success: true, title: "Operación Exitosa", message: `La zona "${payload.nombre}" se ha guardado correctamente.`});
     } catch (error: any) {
-      if (error.response?.status === 400) {
-        setErrorMensaje(error.response.data?.error || "Datos inválidos. Revisa los campos.");
-        setErrorModalOpen(true);
-      } else {
-        console.error("❌ Error al guardar cambios:", error);
-      }
+        setModalMessage({ show: true, success: false, title: "Error al Guardar", message: error.response?.data?.error || "Ocurrió un error inesperado."});
+    } finally {
+        setGuardando(false);
     }
+  }
+
+  const cambiarEstado = (zona: Zona, nuevoEstado: string) => {
+    setModalConfirm({
+        show: true,
+        title: `Cambiar Estado`,
+        message: `¿Seguro que quieres cambiar el estado de la zona <strong>${zona.nombre}</strong> a <strong>${nuevoEstado}</strong>?`,
+        confirmText: 'Confirmar',
+        variant: 'default',
+        onConfirm: async () => {
+            try {
+                const ruta = {"activo": "activar", "inactivo": "inactivar", "mantenimiento": "mantenimiento"}[nuevoEstado];
+                await axios.patch(`http://localhost:4000/api/zona/${ruta}/${zona.id_zona}`);
+                setZonas(zonas.map(z => z.id_zona === zona.id_zona ? {...z, estado: nuevoEstado as any} : z));
+                setModalMessage({ show: true, success: true, title: "Estado Actualizado", message: `El estado de la zona ha sido actualizado a ${nuevoEstado}.` });
+            } catch (error: any) {
+                setModalMessage({ show: true, success: false, title: "Error", message: error.response?.data?.error || "No se pudo cambiar el estado." });
+            } finally {
+                setModalConfirm({ ...modalConfirm, show: false });
+                setMenuOpenId(null);
+            }
+        }
+    });
   };
 
-  const totalZonas = zonas.length;
-  const zonasActivas = zonas.filter((z) => z.estado === "activo").length;
+  const eliminarZona = (zona: Zona) => {
+    if (zona.estado !== 'inactivo') {
+        setModalMessage({ show: true, success: false, title: "Acción no permitida", message: `Solo se pueden eliminar zonas con estado "Inactivo". El estado actual es "${zona.estado}".` });
+        setMenuOpenId(null);
+        return;
+    }
+    setModalConfirm({
+        show: true,
+        title: "Eliminar Zona",
+        message: `Esta acción es permanente y no se puede deshacer. ¿Seguro que quieres eliminar la zona <strong>${zona.nombre}</strong>?`,
+        confirmText: "Eliminar",
+        variant: 'danger',
+        onConfirm: async () => {
+            try {
+                await axios.delete(`http://localhost:4000/api/zona/${zona.id_zona}`);
+                setZonas(zonas.filter(z => z.id_zona !== zona.id_zona));
+                setModalMessage({ show: true, success: true, title: "Zona Eliminada", message: "La zona ha sido eliminada correctamente." });
+            } catch (error: any) {
+                setModalMessage({ show: true, success: false, title: "Error al Eliminar", message: error.response?.data?.error || "Ocurrió un error." });
+            } finally {
+                setModalConfirm({ ...modalConfirm, show: false });
+                setMenuOpenId(null);
+            }
+        }
+    });
+  };
 
- return (
-  <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
-    <div className="flex justify-between items-center mb-4">
-  <h1 className="text-3xl font-bold text-green-800">
-    Zonas del Invernadero #{id_invernadero}
-  </h1>
-  <button
-    onClick={() => setModalOpen(true)}
-    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-full shadow-md transition-all"
-  >
-    + Crear Zona
-  </button>
-</div>
+  const StatusBadge = ({ estado }) => {
+    const config = {
+      activo: { text: "Activo", color: "bg-green-100 text-green-800", icon: <CheckCircle2 className="w-3 h-3" /> },
+      inactivo: { text: "Inactivo", color: "bg-slate-100 text-slate-600", icon: <XCircle className="w-3 h-3" /> },
+      mantenimiento: { text: "Mantenimiento", color: "bg-amber-100 text-amber-800", icon: <Wrench className="w-3 h-3" /> },
+    };
+    const current = config [estado] || config.inactivo;
+    return <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${current.color}`}>{current.icon}{current.text}</span>;
+  };
 
-<p className="text-gray-600 mb-8">
-  Total zonas: <strong>{totalZonas}</strong> | Zonas activas: <strong>{zonasActivas}</strong>
-</p>
+  return (
+    <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
+        <div>
+          <Link href="/home/admin/invernaderos" className="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1 mb-2">
+            <ArrowLeft className="w-4 h-4"/> Volver a Invernaderos
+          </Link>
+          <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">Zonas del Invernadero #{id_invernadero}</h1>
+          <p className="text-lg text-slate-500 mt-1">
+            {zonas.length} Zonas Totales | {zonas.filter(z => z.estado === 'activo').length} Zonas Activas
+          </p>
+        </div>
+        <button onClick={() => abrirModal()} className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2">
+          <Plus className="w-5 h-5" />
+          <span>Nueva Zona</span>
+        </button>
+      </div>
 
-
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {zonas.map((zona) => (
-        <div
-          key={zona.id_zona}
-          className="bg-white rounded-xl shadow-md p-5 border border-gray-200 relative flex flex-col gap-2"
-        >
-          <div className="flex justify-between items-start">
-            <h2 className="text-xl font-semibold text-green-700">{zona.nombre}</h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setZonaEditando(zona)}
-                className="text-green-600 hover:text-green-800"
-                title="Editar"
-              >
-                <PencilIcon className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() =>
-                  setMenuOpenId((prev) => (prev === zona.id_zona ? null : zona.id_zona))
-                }
-                className="text-gray-600 hover:text-gray-800 text-xl"
-                title="Opciones"
-              >
-                ⋮
-              </button>
-            </div>
-            {menuOpenId === zona.id_zona && (
-              <div
-                ref={menuRef}
-                className="absolute right-0 top-10 bg-white border shadow rounded-md z-50"
-              >
-                <button
-                  onClick={() => activarZona(zona.id_zona)}
-                  className="block w-full px-4 py-2 text-left hover:bg-gray-100"
-                >
-                  Activar
-                </button>
-                <button
-                  onClick={() => inactivarZona(zona.id_zona)}
-                  className="block w-full px-4 py-2 text-left hover:bg-gray-100"
-                >
-                  Inactivar
-                </button>
-                <button
-                  onClick={() => mantenimientoZona(zona.id_zona)}
-                  className="block w-full px-4 py-2 text-left hover:bg-gray-100"
-                >
-                  En mantenimiento
-                </button>
-                <button
-                  onClick={() => {
-                    if (zona.estado === "inactivo") {
-                      setZonaAEliminar(zona);
-                    } else {
-                      setZonaBloqueada(zona);
-                      setAlertaZonaActiva(true);
-                    }
-                  }}
-                  className="block w-full px-4 py-2 text-left text-red-600 hover:bg-red-50"
-                >
-                  Eliminar
-                </button>
+      {cargando ? (
+        <div className="text-center py-20"><Loader2 className="w-12 h-12 mx-auto text-teal-600 animate-spin" /><p className="mt-4 text-slate-500">Cargando zonas...</p></div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {zonas.map((zona) => (
+            <div key={zona.id_zona} className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+              <div className="p-5">
+                 <div className="flex justify-between items-start mb-2">
+                    <h2 className="text-xl font-bold text-slate-800">{zona.nombre}</h2>
+                    <div ref={menuOpenId === zona.id_zona ? menuRef : null} className="relative">
+                        <button onClick={() => setMenuOpenId(prev => prev === zona.id_zona ? null : zona.id_zona)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><MoreVertical className="w-5 h-5" /></button>
+                        {menuOpenId === zona.id_zona && (
+                            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 shadow-lg rounded-lg z-10 overflow-hidden">
+                                <button onClick={() => abrirModal(zona)} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><Pencil className="w-4 h-4"/> Editar</button>
+                                <button onClick={() => cambiarEstado(zona, "activo")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><Check className="w-4 h-4 text-green-500"/> Activar</button>
+                                <button onClick={() => cambiarEstado(zona, "inactivo")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><CircleDot className="w-4 h-4 text-slate-500"/> Inactivar</button>
+                                <button onClick={() => cambiarEstado(zona, "mantenimiento")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><Wrench className="w-4 h-4 text-amber-500"/> Mantenimiento</button>
+                                <button onClick={() => eliminarZona(zona)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"><Trash2 className="w-4 h-4"/> Eliminar</button>
+                            </div>
+                        )}
+                    </div>
+                 </div>
+                 <p className="text-sm text-slate-500 mb-4 h-10 line-clamp-2">{zona.descripciones_add}</p>
+                 <div className="text-sm space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-slate-600"><Sprout className="w-4 h-4"/><span>Cultivo: <span className="font-semibold">{cultivosDisponibles.find(c => c.id_cultivo === Number(zona.id_cultivo))?.nombre_cultivo || 'No asignado'}</span></span></div>
+                    <div className="flex items-center gap-2"><StatusBadge estado={zona.estado} /></div>
+                 </div>
+                 <ZonaChart />
               </div>
-            )}
-          </div>
-
-          <p className="text-sm text-gray-600">{zona.descripciones_add}</p>
-          <p className="text-sm text-gray-700">
-            Estado: <span className={`font-semibold uppercase ${getColorEstado(zona.estado)}`}>{zona.estado}</span>
-          </p>
-          <p className="text-sm text-gray-700">
-            Cultivo: <span className="italic text-gray-600">{obtenerNombreCultivo(zona.id_cultivo)}</span>
-          </p>
-          <p className="text-xs text-gray-500">
-            ID Zona: {zona.id_zona} | Invernadero: {id_invernadero}
-          </p>
-
-            {/* 🌡️ Gráfica comparativa de humedad (datos quemados) */}
-                        <div className="w-full h-56 my-3">
-              <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
-                Humedad Ideal vs Actual
-              </h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={[
-                    { tiempo: "Ahora", humedad_ideal: 65, humedad_actual: 48 },
-                    { tiempo: "Hace 10m", humedad_ideal: 65, humedad_actual: 50 },
-                    { tiempo: "Hace 20m", humedad_ideal: 65, humedad_actual: 52 },
-                    { tiempo: "Hace 30m", humedad_ideal: 65, humedad_actual: 55 },
-                  ]}
-                  margin={{ top: 10, right: 30, left: -20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="tiempo" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="humedad_ideal"
-                    stroke="#86da86ff"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Humedad Ideal"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="humedad_actual"
-                    stroke="#10b981ff"
-                    strokeWidth={2}
-                    name="Humedad Actual"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <div className="mt-auto border-t border-slate-200 bg-slate-50 p-4 grid grid-cols-2 gap-3">
+                 <Link href={`/home/admin/invernaderos/zonas/programacion-riego?id=${zona.id_zona}`} className="text-center font-semibold bg-blue-100 text-blue-800 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-blue-200 transition-colors">
+                    <Droplets className="w-4 h-4"/>Riego
+                 </Link>
+                 <Link href={`/home/admin/invernaderos/zonas/programacion-iluminacion?id=${zona.id_zona}`} className="text-center font-semibold bg-amber-100 text-amber-800 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-amber-200 transition-colors">
+                    <Sun className="w-4 h-4"/>Iluminación
+                 </Link>
+              </div>
             </div>
-            
-          <div className="flex justify-between mt-4">
-            <Link
-              href={`/home/admin/invernaderos/zonas/programacion-riego?id=${zona.id_zona}`}
-              className="bg-green-500 text-white px-4 py-1 rounded-md hover:bg-green-600 text-sm"
-            >
-              Riego
-            </Link>
-            <Link
-              href={`/home/admin/invernaderos/zonas/programacion-iluminacion?id=${zona.id_zona}`}
-              className="bg-blue-500 text-white px-4 py-1 rounded-md hover:bg-blue-600 text-sm"
-            >
-              Iluminación
-            </Link>
+          ))}
+        </div>
+      )}
+      
+      {modalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-200">
+              <h2 className="text-2xl font-bold text-slate-800">{editando ? "Editar" : "Nueva"} Zona</h2>
+              <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 p-2 text-slate-500 hover:bg-slate-100 rounded-full"><X/></button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <input placeholder="Nombre de la zona" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="w-full border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <textarea placeholder="Descripción adicional" value={form.descripciones_add} onChange={(e) => setForm({ ...form, descripciones_add: e.target.value })} className="w-full border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" rows={3}/>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Asignar Cultivo (Opcional)</label>
+                 <select value={form.id_cultivo} onChange={(e) => setForm({ ...form, id_cultivo: e.target.value })} className="w-full border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
+                    <option value="">-- Sin cultivo asignado --</option>
+                    {cultivosDisponibles.map((cultivo) => (
+                        <option key={cultivo.id_cultivo} value={cultivo.id_cultivo}>{cultivo.nombre_cultivo}</option>
+                    ))}
+                 </select>
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
+              <button onClick={() => setModalOpen(false)} className="px-6 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-colors">Cancelar</button>
+              <button onClick={handleFormSubmit} disabled={guardando} className="px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2 disabled:bg-teal-400">
+                {guardando ? <><Loader2 className="w-5 h-5 animate-spin"/> Guardando...</> : editando ? "Guardar Cambios" : "Crear Zona"}
+              </button>
+            </div>
           </div>
         </div>
-      ))}
-    </div>
+      )}
 
-    
-
-    {/* Modal crear zona */}
-    {modalOpen && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-4">
-        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-          <h2 className="text-2xl font-semibold text-green-700 mb-4">Nueva Zona</h2>
-
-          <input
-            placeholder="Nombre"
-            value={form.nombre}
-            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            className="w-full border border-gray-300 p-2 rounded mb-3"
-          />
-          <textarea
-            placeholder="Descripción"
-            value={form.descripciones_add}
-            onChange={(e) => setForm({ ...form, descripciones_add: e.target.value })}
-            className="w-full border border-gray-300 p-2 rounded mb-3"
-          />
-          <select
-            value={form.id_cultivo}
-            onChange={(e) => setForm({ ...form, id_cultivo: e.target.value })}
-            className="w-full border border-gray-300 p-2 rounded mb-4"
-          >
-            <option value="">-- Sin cultivo --</option>
-            {cultivosDisponibles.map((cultivo) => (
-              <option key={cultivo.id_cultivo} value={cultivo.id_cultivo}>
-                {cultivo.nombre_cultivo}
-              </option>
-            ))}
-          </select>
-
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setModalOpen(false)}
-              className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={crearZona}
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-            >
-              Crear
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {/* Modal editar zona */}
-    {zonaEditando && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-4">
-        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-          <h2 className="text-2xl font-semibold text-green-700 mb-4">Editar Zona</h2>
-
-          <input
-            placeholder="Nombre"
-            value={zonaEditando.nombre}
-            onChange={(e) => setZonaEditando({ ...zonaEditando, nombre: e.target.value })}
-            className="w-full border border-gray-300 p-2 rounded mb-3"
-          />
-
-          <textarea
-            placeholder="Descripción"
-            value={zonaEditando.descripciones_add}
-            onChange={(e) =>
-              setZonaEditando({ ...zonaEditando, descripciones_add: e.target.value })
-            }
-            className="w-full border border-gray-300 p-2 rounded mb-3"
-          />
-
-          <select
-            value={zonaEditando.id_cultivo || ""}
-            onChange={(e) =>
-              setZonaEditando({ ...zonaEditando, id_cultivo: e.target.value })
-            }
-            className="w-full border border-gray-300 p-2 rounded mb-4"
-          >
-            <option value="">-- Sin cultivo --</option>
-            {cultivosDisponibles.map((cultivo) => (
-              <option key={cultivo.id_cultivo} value={cultivo.id_cultivo}>
-                {cultivo.nombre_cultivo}
-              </option>
-            ))}
-          </select>
-
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setZonaEditando(null)}
-              className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={guardarEdicion}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Guardar
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {/* Modal eliminar zona */}
-    {zonaAEliminar && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-4">
-        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-4">¿Eliminar Zona?</h2>
-          <p className="text-gray-700 mb-6">
-            ¿Estás seguro que deseas eliminar la zona <strong>{zonaAEliminar.nombre}</strong>? Esta acción no se puede deshacer.
-          </p>
-          <div className="flex justify-center gap-4">
-            <button
-              onClick={() => setZonaAEliminar(null)}
-              className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={eliminarZonaConfirmada}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-            >
-              Eliminar
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {/* Modal zona activa (alerta) */}
-    {alertaZonaActiva && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-4">
-        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md text-center">
-          <h2 className="text-xl font-semibold text-yellow-600 mb-4">No se puede eliminar la zona</h2>
-            <p className="text-gray-700 mb-6">
-              Solo puedes eliminar zonas con estado <strong>inactivo</strong>. Esta zona está en estado <strong>{zonaBloqueada?.estado}</strong>.
-            </p>
-
-
-          <div className="flex justify-center">
-            <button
-  onClick={() => {
-    setAlertaZonaActiva(false);
-    setZonaBloqueada(null); // Limpiar zona bloqueada al cerrar
-  }}
-  className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
->
-  Entendido
-</button>
-
-
-          </div>
-        </div>
-      </div>
-    )}
-
-    {/* Modal error */}
-    {errorModalOpen && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-4">
-        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-700 mb-6">{errorMensaje}</p>
-          <div className="flex justify-center">
-            <button
-              onClick={() => setErrorModalOpen(false)}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-  </main>
-);
+      {modalConfirm.show && <ConfirmModal title={modalConfirm.title} message={modalConfirm.message} onConfirm={modalConfirm.onConfirm} onCancel={() => setModalConfirm({ ...modalConfirm, show: false })} confirmText={modalConfirm.confirmText} variant={modalConfirm.variant}/>}
+      {modalMessage.show && <MessageModal title={modalMessage.title} message={modalMessage.message} success={modalMessage.success} onCerrar={() => setModalMessage({ ...modalMessage, show: false })} />}
+    </main>
+  );
 }

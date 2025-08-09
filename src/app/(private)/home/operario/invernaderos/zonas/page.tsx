@@ -1,21 +1,28 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import axios from "axios";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceArea,
-} from "recharts";
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Sprout, User, Building, CheckCircle2, XCircle, Wrench, Loader2, ChevronRight, X, Droplets, Sun, Thermometer, ArrowLeft } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea } from "recharts";
 
+// --- Interfaces ---
+interface Invernadero {
+  id_invernadero: number;
+  nombre: string;
+  descripcion: string;
+  responsable_id: number;
+  estado: 'activo' | 'inactivo' | 'mantenimiento';
+  zonas_totales: number;
+  zonas_activas: number;
+  encargado?: Responsable;
+}
+
+interface Responsable {
+  id_persona: number;
+  nombre_usuario: string;
+}
 
 interface Zona {
   id_zona: number;
@@ -30,147 +37,118 @@ interface Cultivo {
   nombre_cultivo: string;
 }
 
+// --- Componentes Reutilizables ---
+const StatusBadge = ({ estado }: { estado: string }) => {
+    const config = {
+      activo: { text: "Activo", color: "bg-teal-100 text-teal-800", icon: <CheckCircle2 className="w-3 h-3" /> },
+      inactivo: { text: "Inactivo", color: "bg-amber-100 text-amber-800", icon: <XCircle className="w-3 h-3" /> },
+      mantenimiento: { text: "Mantenimiento", color: "bg-slate-200 text-slate-800", icon: <Wrench className="w-3 h-3" /> },
+    };
+    const current = config[estado] || config.inactivo;
+    return <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${current.color}`}>{current.icon}{current.text}</span>;
+};
 
+const ZonaChart = ({ data, idealRange, dataKey, name, unit, color }) => (
+    <div className="mt-4">
+        <h4 className="text-sm font-semibold text-slate-600 mb-2">{name} Reciente ({unit})</h4>
+        <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="tiempo" tick={{ fill: '#64748b', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} domain={[idealRange.min - 5, idealRange.max + 5]}/>
+                <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.75rem', fontSize: '13px' }}/>
+                <ReferenceArea y1={idealRange.min} y2={idealRange.max} fill={color} fillOpacity={0.1} label={{ value: "Rango Ideal", position: "insideTopRight", fill: "#94a3b8", fontSize: 11, dy: 10 }} />
+                <Line type="monotone" dataKey={dataKey} name={name} stroke={color} strokeWidth={2.5} dot={{ r: 5 }} activeDot={{ r: 7 }} />
+            </LineChart>
+        </ResponsiveContainer>
+    </div>
+);
 
-// Rango ideal del cultivo (quemado también)
-const rangoHumedad = { min: 50, max: 65 };
-const rangoTemperatura = { min: 22, max: 30 };
-export default function ZonasOperario() {
+// --- Componente Principal ---
+export default function ZonasOperarioPage() {
   const searchParams = useSearchParams();
-  const id_invernadero = searchParams.get("id_invernadero") || "1";
-
+  const id_invernadero = searchParams.get("id_invernadero");
+  
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [cultivosDisponibles, setCultivosDisponibles] = useState<Cultivo[]>([]);
-
-  const getColorEstado = (estado: string) => {
-    switch (estado) {
-      case "activo":
-        return "text-green-600";
-      case "inactivo":
-        return "text-gray-500";
-      case "mantenimiento":
-        return "text-yellow-600";
-      default:
-        return "text-gray-700";
-    }
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchZonas = async () => {
+    const fetchData = async () => {
+      if (!id_invernadero) return;
+      setLoading(true);
       try {
-        const res = await axios.get(`http://localhost:4000/api/zona/invernadero/${id_invernadero}`);
-        setZonas(res.data);
-      } catch (error) {
-        console.error("Error al cargar zonas:", error);
+        const [zonasRes, cultivosRes] = await Promise.all([
+            axios.get(`http://localhost:4000/api/zona/invernadero/${id_invernadero}`),
+            axios.get("http://localhost:4000/api/cultivos")
+        ]);
+        setZonas(zonasRes.data);
+        setCultivosDisponibles(cultivosRes.data);
+      } catch (err) {
+        console.error('Error al cargar datos:', err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchZonas();
+    fetchData();
   }, [id_invernadero]);
 
-  useEffect(() => {
-    const fetchCultivos = async () => {
-      try {
-        const res = await axios.get("http://localhost:4000/api/cultivos");
-        setCultivosDisponibles(res.data);
-      } catch (error) {
-        console.error("Error al cargar cultivos:", error);
-      }
-    };
-    fetchCultivos();
-  }, []);
-
-  const obtenerNombreCultivo = (id_cultivo: string | null | undefined) => {
+  const obtenerNombreCultivo = (id_cultivo) => {
     const cultivo = cultivosDisponibles.find((c) => c.id_cultivo === Number(id_cultivo));
-    return cultivo ? cultivo.nombre_cultivo : "Sin cultivo asignado";
+    return cultivo ? cultivo.nombre_cultivo : "Sin Asignar";
   };
-
-  const totalZonas = zonas.length;
-  const zonasActivas = zonas.filter((z) => z.estado === "activo").length;
+  
+  const humidityData = [
+      { tiempo: "30m", humedad_actual: 55 }, { tiempo: "20m", humedad_actual: 52 },
+      { tiempo: "10m", humedad_actual: 50 }, { tiempo: "Ahora", humedad_actual: 48 },
+  ];
 
   return (
-    <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
-      <h1 className="text-3xl font-bold text-green-800 mb-4">
-        Zonas del Invernadero #{id_invernadero}
-      </h1>
-
-      <p className="text-gray-600 mb-8">
-        Total zonas: <strong>{totalZonas}</strong> | Zonas activas: <strong>{zonasActivas}</strong>
-      </p>
-
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {zonas.map((zona) => (
-          <div
-            key={zona.id_zona}
-            className="bg-white rounded-xl shadow-md p-5 border border-gray-200 flex flex-col gap-2"
-          >
-            <h2 className="text-xl font-semibold text-green-700">{zona.nombre}</h2>
-            <p className="text-sm text-gray-600">{zona.descripciones_add}</p>
-            <p className="text-sm text-gray-700">
-              Estado: <span className={`font-semibold uppercase ${getColorEstado(zona.estado)}`}>{zona.estado}</span>
-            </p>
-            <p className="text-sm text-gray-700">
-              Cultivo: <span className="italic text-gray-600">{obtenerNombreCultivo(zona.id_cultivo)}</span>
-            </p>
-            <p className="text-xs text-gray-500">
-              ID Zona: {zona.id_zona} | Invernadero: {id_invernadero}
-            </p>
-            {/* 🌡️ Gráfica comparativa de humedad (datos quemados) */}
-            <div className="w-full h-56 my-3">
-  <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
-    Humedad Ideal vs Actual
-  </h3>
-  <ResponsiveContainer width="100%" height="100%">
-    <LineChart
-      data={[
-        { tiempo: "Ahora", humedad_ideal: 65, humedad_actual: 48 },
-        { tiempo: "Hace 10m", humedad_ideal: 65, humedad_actual: 50 },
-        { tiempo: "Hace 20m", humedad_ideal: 65, humedad_actual: 52 },
-        { tiempo: "Hace 30m", humedad_ideal: 65, humedad_actual: 55 },
-      ]}
-      margin={{ top: 10, right: 30, left: -20, bottom: 5 }}
-    >
-      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-      <XAxis dataKey="tiempo" tick={{ fontSize: 11 }} />
-      <YAxis tick={{ fontSize: 11 }} />
-      <Tooltip />
-      <Legend />
-      <Line
-        type="monotone"
-        dataKey="humedad_ideal"
-        stroke="#86da86ff"
-        strokeWidth={2}
-        dot={false}
-        name="Humedad Ideal"
-      />
-      <Line
-        type="monotone"
-        dataKey="humedad_actual"
-        stroke="#10b981ff"
-        strokeWidth={2}
-        name="Humedad Actual"
-      />
-    </LineChart>
-  </ResponsiveContainer>
-</div>
-
-
-            <div className="flex justify-between mt-4">
-              <Link
-                href={`/home/operario/invernaderos/zonas/programacion-riego?id=${zona.id_zona}`}
-                className="bg-green-500 text-white px-4 py-1 rounded-md hover:bg-green-600 text-sm"
-              >
-                Riego
-              </Link>
-              <Link
-                href={`/home/operario/invernaderos/zonas/programacion-iluminacion?id=${zona.id_zona}`}
-                className="bg-blue-500 text-white px-4 py-1 rounded-md hover:bg-blue-600 text-sm"
-              >
-                Iluminación
-              </Link>
-            </div>
-          </div>
-        ))}
+    <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
+       <div className="mb-10">
+          <Link href="/home/operario/invernaderos" className="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1 mb-2">
+            <ArrowLeft className="w-4 h-4"/> Volver a Invernaderos
+          </Link>
+          <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">
+            Zonas del Invernadero #{id_invernadero}
+          </h1>
+          <p className="text-lg text-slate-500 mt-1">
+            Total: {zonas.length} | Activas: {zonas.filter(z => z.estado === 'activo').length}
+          </p>
       </div>
+
+      {loading ? (
+        <div className="text-center py-20">
+            <Loader2 className="w-12 h-12 mx-auto text-teal-600 animate-spin"/>
+            <p className="mt-4 text-slate-500">Cargando zonas...</p>
+        </div>
+      ) : zonas.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {zonas.map((zona) => (
+            <div key={zona.id_zona} className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <div className="p-5">
+                    <h3 className="text-lg font-bold text-slate-800">{zona.nombre}</h3>
+                    <p className="text-sm text-slate-500 mb-3 h-10 line-clamp-2">{zona.descripciones_add}</p>
+                    <div className="flex items-center gap-4 mb-3">
+                        <StatusBadge estado={zona.estado}/>
+                        <span className="text-sm text-slate-600"><strong>Cultivo:</strong> {obtenerNombreCultivo(zona.id_cultivo)}</span>
+                    </div>
+                    <ZonaChart data={humidityData} idealRange={{min: 50, max: 65}} dataKey="humedad_actual" name="Humedad" unit="%" color="#3b82f6" />
+                </div>
+                <div className="mt-auto border-t border-slate-200 bg-slate-50 p-3 grid grid-cols-2 gap-3">
+                    <Link href={`/home/operario/invernaderos/zonas/programacion-riego?id=${zona.id_zona}`} className="text-sm text-center font-semibold bg-blue-100 text-blue-800 px-3 py-2 rounded-md hover:bg-blue-200 flex items-center justify-center gap-1.5"><Droplets className="w-4 h-4"/> Riego</Link>
+                    <Link href={`/home/operario/invernaderos/zonas/programacion-iluminacion?id=${zona.id_zona}`} className="text-sm text-center font-semibold bg-amber-100 text-amber-800 px-3 py-2 rounded-md hover:bg-amber-200 flex items-center justify-center gap-1.5"><Sun className="w-4 h-4"/> Iluminación</Link>
+                </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
+            <Building className="w-16 h-16 mx-auto text-slate-400" />
+            <h3 className="mt-4 text-xl font-semibold text-slate-700">No hay zonas para mostrar</h3>
+            <p className="text-slate-500 mt-1">Este invernadero aún no tiene zonas configuradas.</p>
+        </div>
+      )}
     </main>
   );
 }

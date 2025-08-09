@@ -69,8 +69,10 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
 
             {user ? (
                 <div className="flex items-center gap-4">
+                    {/* CAMBIO: Se añade el icono de notificaciones */}
                     <Link href={`/home/${user.rol}/notificaciones`} className="relative p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
                         <Bell className="w-6 h-6"/>
+                        {/* Indicador de notificaciones nuevas (lógica de ejemplo) */}
                         <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white dark:border-slate-900"></span>
                     </Link>
 

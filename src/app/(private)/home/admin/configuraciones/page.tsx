@@ -1,65 +1,86 @@
 "use client";
+import React from "react";
 import Link from "next/link";
-import {
-  UserIcon,
-  UsersIcon,
-  QuestionMarkCircleIcon,
-  ArrowRightOnRectangleIcon,
-  UserPlusIcon,
-} from "@heroicons/react/24/outline";
+import { User, Users, HelpCircle, LogOut, UserPlus, Settings } from "lucide-react";
 
-const configuraciones = [
+// --- Tipos de Datos ---
+interface ConfiguracionItem {
+  nombre: string;
+  descripcion: string;
+  icono: React.ElementType;
+  href: string;
+  isDestructive?: boolean;
+}
+
+// --- Datos de Configuración ---
+const configuraciones: ConfiguracionItem[] = [
   {
-    nombre: "Perfil",
-    descripcion: "Administra tu información personal y contraseña",
-    icono: <UserIcon className="h-6 w-6 text-green-700" />,
+    nombre: "Mi Perfil",
+    descripcion: "Administra tu información personal y contraseña.",
+    icono: User,
     href: "/home/admin/configuraciones/perfil",
   },
   {
     nombre: "Gestión de Usuarios",
-    descripcion: "Editar, activar o desactivar usuarios",
-    icono: <UsersIcon className="h-6 w-6 text-green-700" />,
+    descripcion: "Crea, edita, activa o desactiva usuarios.",
+    icono: Users,
     href: "/home/admin/configuraciones/usuarios",
   },
-  {
-    nombre: "Ayuda",
-    descripcion: "Centro de soporte y preguntas frecuentes",
-    icono: <QuestionMarkCircleIcon className="h-6 w-6 text-green-700" />,
-    href: "/home/admin/configuraciones/ayuda",
-  },
-  {
-    nombre: "Registro",
-    descripcion: "Registrar un nuevo usuario en el sistema",
-    icono: <UserPlusIcon className="h-6 w-6 text-green-700" />,
+   {
+    nombre: "Registrar Nuevo Usuario",
+    descripcion: "Añade un nuevo administrador u operario al sistema.",
+    icono: UserPlus,
     href: "/home/admin/configuraciones/registro",
   },
   {
     nombre: "Cerrar Sesión",
-    descripcion: "Salir del sistema de manera segura",
-    icono: <ArrowRightOnRectangleIcon className="h-6 w-6 text-red-600" />,
-    href: "/login", // puedes agregar aquí lógica para limpiar sesión
+    descripcion: "Finaliza tu sesión actual de forma segura.",
+    icono: LogOut,
+    href: "/login", 
+    isDestructive: true,
   },
 ];
 
+
+// --- Componente de Tarjeta de Configuración ---
+const ConfiguracionCard = ({ item }: { item: ConfiguracionItem }) => {
+  const Icono = item.icono;
+  const baseClasses = "bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-start gap-5 transition-all duration-300 group";
+  const hoverClasses = item.isDestructive 
+    ? "hover:border-red-300 hover:bg-red-50" 
+    : "hover:border-teal-300 hover:bg-teal-50/50 hover:shadow-md hover:-translate-y-1";
+
+  return (
+    <Link href={item.href} className={`${baseClasses} ${hoverClasses}`}>
+      <div className={`p-3 rounded-lg ${item.isDestructive ? 'bg-red-100 text-red-600' : 'bg-teal-100 text-teal-700'}`}>
+        <Icono className="h-6 w-6" />
+      </div>
+      <div>
+        <h2 className={`text-lg font-bold ${item.isDestructive ? 'text-red-800' : 'text-slate-800'}`}>{item.nombre}</h2>
+        <p className="text-slate-500 text-sm mt-1">{item.descripcion}</p>
+      </div>
+    </Link>
+  );
+};
+
+
+// --- Componente Principal ---
 export default function ConfiguracionesPage() {
   return (
-    <main className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen transition-all duration-300">
-      <h1 className="text-4xl font-bold text-darkGreen-900 mb-8">Configuraciones</h1>
+    <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
+       <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
+            <Settings className="w-10 h-10 text-slate-500"/>
+            <span>Configuración</span>
+          </h1>
+          <p className="text-lg text-slate-500 mt-1">Gestiona tu cuenta y los ajustes del sistema.</p>
+        </div>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {configuraciones.map((item) => (
-          <Link
-            key={item.nombre}
-            href={item.href}
-            className="bg-white rounded-2xl shadow hover:shadow-md p-6 flex items-start gap-4 transition"
-          >
-            <div className="bg-green-100 rounded-full p-2">
-              {item.icono}
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-green-900">{item.nombre}</h2>
-              <p className="text-gray-600 text-sm">{item.descripcion}</p>
-            </div>
-          </Link>
+          <ConfiguracionCard key={item.nombre} item={item} />
         ))}
       </div>
     </main>
