@@ -1,5 +1,5 @@
 "use client";
-
+import PropTypes from 'prop-types';
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Link from "next/link";
@@ -41,19 +41,40 @@ interface Responsable {
   rol: string;
   estado: string;
 }
+interface ConfirmModal{
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirmText?: string;
+}
 
 const formInicial = {
   id_invernadero: 0,
   nombre: "",
   descripcion: "",
   responsable_id: 0,
-  estado: "activo" as "activo",
+  estado: "activo" as "activo" | "inactivo" | "mantenimiento",
   zonas_totales: 0,
   zonas_activas: 0,
 };
 
+
+interface MessageModalProps {
+  title: string;
+  message: string;
+  onCerrar: () => void;
+  success?: boolean;
+}
+
 // --- Modales Personalizados ---
-const ConfirmModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirmar" }) => (
+const ConfirmModal: React.FC<ConfirmModal> = ({
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = "Confirmar",
+}) => (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
             <AlertTriangle className="w-16 h-16 mx-auto text-amber-500 mb-4" />
@@ -67,7 +88,12 @@ const ConfirmModal = ({ title, message, onConfirm, onCancel, confirmText = "Conf
     </div>
 );
 
-const MessageModal = ({ title, message, onCerrar, success = true }) => (
+const MessageModal: React.FC<MessageModalProps> = ({
+  title,
+  message,
+  onCerrar,
+  success = true
+}) => (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
             {success ? <CheckCircle2 className="w-16 h-16 mx-auto text-teal-500 mb-4" /> : <XCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />}
@@ -156,6 +182,7 @@ export default function InvernaderosPage() {
     setBusquedaResponsable("");
     setResponsables([]);
   }
+  
 
   const handleFormSubmit = async () => {
     if (!form.nombre.trim() || !form.descripcion.trim() || !form.responsable_id) {
@@ -229,15 +256,15 @@ export default function InvernaderosPage() {
     });
   };
 
-  const StatusBadge = ({ estado }) => {
-    const config = {
-      activo: { text: "Activo", color: "bg-green-100 text-green-800", icon: <CheckCircle2 className="w-3 h-3" /> },
-      inactivo: { text: "Inactivo", color: "bg-slate-100 text-slate-600", icon: <XCircle className="w-3 h-3" /> },
-      mantenimiento: { text: "Mantenimiento", color: "bg-amber-100 text-amber-800", icon: <Wrench className="w-3 h-3" /> },
-    };
-    const current = config[estado] || config.inactivo;
-    return <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${current.color}`}>{current.icon}{current.text}</span>;
+  const StatusBadge: React.FC<{ estado: "activo" | "inactivo" | "mantenimiento" }> = ({ estado }) => {
+  const config = {
+    activo: { text: "Activo", color: "bg-green-100 text-green-800", icon: <CheckCircle2 className="w-3 h-3" /> },
+    inactivo: { text: "Inactivo", color: "bg-slate-100 text-slate-600", icon: <XCircle className="w-3 h-3" /> },
+    mantenimiento: { text: "Mantenimiento", color: "bg-amber-100 text-amber-800", icon: <Wrench className="w-3 h-3" /> },
   };
+  const current = config[estado];
+  return <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${current.color}`}>{current.icon}{current.text}</span>;
+};
   
   return (
     <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
