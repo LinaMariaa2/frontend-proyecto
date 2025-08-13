@@ -48,14 +48,14 @@ export default function Estadisticas() {
       {/* Grid de Tarjetas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
         <EstadisticaCard
-          title="Consumo de Agua"
+          title="Riego"
           description="Visualiza datos históricos y en tiempo real sobre el uso de agua en los ciclos de riego."
           icon={Droplet}
           href="/home/admin/estadisticas/riego"
           colorClass="bg-gradient-to-br from-sky-500 to-blue-600"
         />
         <EstadisticaCard
-          title="Uso de Energía"
+          title="Energia"
           description="Monitorea el consumo energético de los sistemas de iluminación para optimizar costos."
           icon={Sun}
           href="/home/admin/estadisticas/iluminacion"

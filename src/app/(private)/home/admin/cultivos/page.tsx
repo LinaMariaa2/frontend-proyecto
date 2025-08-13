@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-// CAMBIO: Iconografía consistente con lucide-react
+// Iconos
 import {
   Search,
   Plus,
@@ -36,10 +36,15 @@ interface Cultivo {
   fecha_fin: string | null;
   imagenes: string | null;
   estado: "activo" | "finalizado";
+  cantidad_cosechada: number | null;
+  cantidad_disponible: number | null;
+  cantidad_reservada: number | null;
+  unidad_medida?: "kilogramos" | "unidades"; 
+
 }
 
 // --- Modales Personalizados ---
-const ConfirmModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirmar" }) => (
+const ConfirmModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirmar" }: any) => (
   <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
       <AlertTriangle className="w-16 h-16 mx-auto text-amber-500 mb-4" />
@@ -53,7 +58,7 @@ const ConfirmModal = ({ title, message, onConfirm, onCancel, confirmText = "Conf
   </div>
 );
 
-const MessageModal = ({ title, message, onCerrar, success = true }) => (
+const MessageModal = ({ title, message, onCerrar, success = true }: any) => (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
             {success ? <CheckCircle2 className="w-16 h-16 mx-auto text-teal-500 mb-4" /> : <XCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />}
@@ -76,6 +81,8 @@ export default function CultivosPage() {
   const [guardando, setGuardando] = useState(false);
   const [modalConfirm, setModalConfirm] = useState<{ show: boolean; onConfirm: () => void; title: string; message: string; confirmText: string }>({ show: false, onConfirm: () => {}, title: '', message: '', confirmText: '' });
   const [modalMessage, setModalMessage] = useState<{ show: boolean; title: string; message: string; success: boolean }>({ show: false, title: '', message: '', success: true });
+  const [modalProduccion, setModalProduccion] = useState(false);
+  const [cultivoSeleccionado, setCultivoSeleccionado] = useState<number | null>(null);
 
   const [form, setForm] = useState({
     nombre_cultivo: "",
@@ -87,10 +94,74 @@ export default function CultivosPage() {
     fecha_inicio: "",
     fecha_fin: "",
   });
+
+  const [form2, setForm2]= useState({
+    cantidad_cosechada: "",
+    cantidad_disponible: "",
+    cantidad_reservada: "",
+    unidad_medida: "",
+  });
+
+
   
+  const cultivoEditando = editandoId ? cultivos.find(x => x.id_cultivo === editandoId) ?? null : null;
+
+  const abrirModalProduccion = (id: number) => {
+  setCultivoSeleccionado(id);
+  const c = cultivos.find(x => x.id_cultivo === id);
+
+  setForm2({
+    cantidad_cosechada: c?.cantidad_cosechada != null ? String(c.cantidad_cosechada) : "",
+    cantidad_disponible: c?.cantidad_disponible != null ? String(c.cantidad_disponible) : "",
+    cantidad_reservada: c?.cantidad_reservada != null ? String(c.cantidad_reservada) : "",
+    unidad_medida: c?.unidad_medida ?? "kilogramos", 
+  });
+
+  setModalProduccion(true);
+};
+
+
+  const guardarProduccion = async () => {
+  if (cultivoSeleccionado == null) {
+    setModalMessage({ show: true, title: "Error", message: "No se identificó el cultivo seleccionado.", success: false });
+    return;
+  }
+  if (
+    form2.cantidad_cosechada === "" ||
+    form2.cantidad_disponible === "" ||
+    form2.cantidad_reservada === ""
+  ) {
+    setModalMessage({ show: true, title: "Campos Incompletos", message: "Completa todos los campos de producción.", success: false });
+    return;
+  }
+  if (!form2.unidad_medida) {
+    setModalMessage({ show: true, title: "Falta la unidad", message: "Selecciona la unidad de medida (kilogramos o unidades).", success: false });
+    return;
+  }
+
+  try {
+    await axios.patch(`http://localhost:4000/api/cultivos/${cultivoSeleccionado}`, {
+      cantidad_cosechada: Number(form2.cantidad_cosechada),
+      cantidad_disponible: Number(form2.cantidad_disponible),
+      cantidad_reservada: Number(form2.cantidad_reservada),
+      unidad_medida: form2.unidad_medida,
+    });
+
+    // refrescar lista
+    const res = await axios.get("http://localhost:4000/api/cultivos");
+    setCultivos(res.data);
+    setModalProduccion(false);
+    setModalMessage({ show: true, title: "Éxito", message: "Producción registrada correctamente.", success: true });
+  } catch (error) {
+    console.error(error);
+    setModalMessage({ show: true, title: "Error", message: "No se pudo guardar la producción.", success: false });
+  }
+};
+
+
   // --- Efectos y Lógica de Datos ---
   useEffect(() => {
-    const fetchCultivos = async () => {
+    const ListarCultivos = async () => {
         setCargando(true);
         try {
             const res = await axios.get("http://localhost:4000/api/cultivos");
@@ -102,27 +173,27 @@ export default function CultivosPage() {
             setCargando(false);
         }
     };
-    fetchCultivos();
+    ListarCultivos();
   }, []);
-  
+
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const ClickOutside = (event: MouseEvent) => {
         const target = event.target as HTMLElement;
         if (!target.closest('.menu-opciones-container')) {
             setMenuOpenId(null);
         }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", ClickOutside);
+    return () => document.removeEventListener("mousedown", ClickOutside);
   }, []);
-  
+
   // --- Funciones CRUD y de UI ---
   const resetForm = () => {
     setForm({ nombre_cultivo: "", descripcion: "", temp_min: "", temp_max: "", humedad_min: "", humedad_max: "", fecha_inicio: "", fecha_fin: "" });
     setImagenFile(null);
     setEditandoId(null);
   };
-  
+
   const abrirModal = (cultivo: Cultivo | null = null) => {
     if (cultivo) {
         setForm({
@@ -233,6 +304,11 @@ export default function CultivosPage() {
   };
 
   const cultivosFiltrados = cultivos.filter(c => c.nombre_cultivo.toLowerCase().includes(busqueda.toLowerCase()));
+const unitSuffix = (u?: Cultivo["unidad_medida"]) => {
+  if (u === "unidades") return "unid.";
+  // default/fallback
+  return "kg";
+};
 
   // --- Renderizado del Componente ---
   return (
@@ -285,13 +361,37 @@ export default function CultivosPage() {
                   <div className="flex items-center gap-2 text-slate-600"><Droplets className="w-4 h-4 text-sky-500"/><span>{c.humedad_min}% - {c.humedad_max}%</span></div>
                   <div className="flex items-center gap-2 text-slate-600"><CalendarDays className="w-4 h-4 text-slate-500"/><span>{new Date(c.fecha_inicio).toLocaleDateString()} - {c.fecha_fin ? new Date(c.fecha_fin).toLocaleDateString() : "Presente"}</span></div>
                 </div>
+
+                {/* BLOQUE DE PRODUCCIÓN (OPCIÓN 1: mostrar siempre) */}
+                <div className="text-sm space-y-2 border-t border-slate-200 pt-4 mt-4 text-slate-500 mb-4 flex-grow line-clamp-3">
+                <div>
+                  Cosechado: {c.cantidad_cosechada ?? "—"} {unitSuffix(c.unidad_medida)}
+                </div>
+                <div>
+                  Disponible: {c.cantidad_disponible ?? "—"} {unitSuffix(c.unidad_medida)}
+                </div>
+                <div>
+                  Reservado: {c.cantidad_reservada ?? "—"} {unitSuffix(c.unidad_medida)}
+                </div>
+              </div>
+
+
                 <div className={`mt-4 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full self-start ${c.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'}`}>{c.estado}</div>
+
+                {/* Botones: Producción y demás */}
+                <div className="mt-4 flex gap-2">
+                  <button onClick={() => abrirModalProduccion(c.id_cultivo)} className="px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2 disabled:bg-teal-400">
+                    Gestion Producción
+                  </button>
+                  
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
+      {/* Modal Crear/Editar Cultivo */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative max-h-[90vh] flex flex-col">
@@ -314,9 +414,18 @@ export default function CultivosPage() {
                  <input type="date" title="Fecha de Inicio" value={form.fecha_inicio} onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })} className="w-full text-slate-500 border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
                  <input type="date" title="Fecha de Fin (opcional)" value={form.fecha_fin} onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })} className="w-full text-slate-500 border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
               </div>
+
+              {/* Si estamos editando, muestro producción actual (no usa 'c' fuera del map) */}
+              {cultivoEditando && (
+                <div className="text-sm space-y-1 border-t border-slate-200 pt-4 mt-4">
+                  <div><strong>Cosechado:</strong> {cultivoEditando.cantidad_cosechada ?? '—'}</div>
+                  <div><strong>Disponible:</strong> {cultivoEditando.cantidad_disponible ?? '—'}</div>
+                  <div><strong>Reservado:</strong> {cultivoEditando.cantidad_reservada ?? '—'}</div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Imagen del Cultivo</label>
-                {/* CORRECCIÓN: Se añade la clase 'relative' al contenedor del input de archivo */}
                 <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
                     <UploadCloud className="mx-auto h-12 w-12 text-slate-400"/>
                     <p className="mt-2 text-sm text-slate-600">
@@ -336,9 +445,69 @@ export default function CultivosPage() {
           </div>
         </div>
       )}
-      
+
       {modalConfirm.show && <ConfirmModal title={modalConfirm.title} message={modalConfirm.message} onConfirm={modalConfirm.onConfirm} onCancel={() => setModalConfirm({ ...modalConfirm, show: false })} confirmText={modalConfirm.confirmText} />}
+
       {modalMessage.show && <MessageModal title={modalMessage.title} message={modalMessage.message} success={modalMessage.success} onCerrar={() => setModalMessage({ ...modalMessage, show: false })} />}
+
+        {/* Modal Producción */}
+{modalProduccion && (
+  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+      <h2 className="text-xl font mb-4">Registrar Producción</h2>
+
+      {/* Tipo de unidad */}
+      <select
+        value={form2.unidad_medida}
+        onChange={(e) => setForm2({ ...form2, unidad_medida: e.target.value })}
+        className="w-full mb-3 border p-2 rounded-lg"
+      >
+        <option value="">Seleccione unidad</option>
+        <option value="kilogramos">Kilogramos</option>
+        <option value="unidades">Unidades</option>
+      </select>
+
+      <input
+        type="number"
+        placeholder="Cantidad Cosechada"
+        value={form2.cantidad_cosechada}
+        onChange={(e) => setForm2({ ...form2, cantidad_cosechada: e.target.value })}
+        className="w-full mb-3 border p-2 rounded-lg"
+      />
+      <input
+        type="number"
+        placeholder="Cantidad Disponible"
+        value={form2.cantidad_disponible}
+        onChange={(e) => setForm2({ ...form2, cantidad_disponible: e.target.value })}
+        className="w-full mb-3 border p-2 rounded-lg"
+      />
+      <input
+        type="number"
+        placeholder="Cantidad Reservada"
+        value={form2.cantidad_reservada}
+        onChange={(e) => setForm2({ ...form2, cantidad_reservada: e.target.value })}
+        className="w-full mb-4 border p-2 rounded-lg"
+      />
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => setModalProduccion(false)}
+          className="px-4 py-2 border rounded-lg"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={guardarProduccion}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
     </main>
   );
 }

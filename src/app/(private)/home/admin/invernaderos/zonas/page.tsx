@@ -159,12 +159,12 @@ export default function ZonasPage() {
 
   const abrirModal = (zona: Zona | null = null) => {
     if (zona) {
-        setEditando(zona);
-        setForm({
-            nombre: zona.nombre,
-            descripciones_add: zona.descripciones_add,
-            id_cultivo: zona.id_cultivo || "",
-        });
+  setEditando(zona);
+  setForm({
+    nombre: zona.nombre,
+    descripciones_add: zona.descripciones_add,
+    id_cultivo: zona.id_cultivo != null ? String(zona.id_cultivo) : "",
+  });
     } else {
         setEditando(null);
         setForm(formInicial);
@@ -173,38 +173,61 @@ export default function ZonasPage() {
   }
 
   const handleFormSubmit = async () => {
-    if (!form.nombre.trim() || !form.descripciones_add.trim()) {
-      setModalMessage({ show: true, success: false, title: "Campos Incompletos", message: "El nombre y la descripción son obligatorios." });
-      return;
-    }
-    setGuardando(true);
-
-    const payload = {
-        nombre: form.nombre.trim(),
-        descripciones_add: form.descripciones_add.trim(),
-        id_cultivo: form.id_cultivo ? Number(form.id_cultivo) : null,
-        id_invernadero: Number(id_invernadero),
-        estado: editando ? editando.estado : "activo",
-    };
-
-    try {
-        let res;
-        if(editando){
-            res = await axios.put(`http://localhost:4000/api/zona/${editando.id_zona}`, payload);
-            setZonas(zonas.map(z => z.id_zona === editando.id_zona ? res.data : z));
-        } else {
-            res = await axios.post("http://localhost:4000/api/zona", payload);
-            setZonas([...zonas, res.data.zona]);
-        }
-        setModalOpen(false);
-        setModalMessage({ show: true, success: true, title: "Operación Exitosa", message: `La zona "${payload.nombre}" se ha guardado correctamente.`});
-    } catch (error: any) {
-        setModalMessage({ show: true, success: false, title: "Error al Guardar", message: error.response?.data?.error || "Ocurrió un error inesperado."});
-    } finally {
-        setGuardando(false);
-    }
+  if (!form.nombre.trim() || !form.descripciones_add.trim()) {
+    setModalMessage({ show: true, success: false, title: "Campos Incompletos", message: "El nombre y la descripción son obligatorios." });
+    return;
   }
+  setGuardando(true);
 
+  const payload = {
+    nombre: form.nombre.trim(),
+    descripciones_add: form.descripciones_add.trim(),
+    id_cultivo: form.id_cultivo ? Number(form.id_cultivo) : null,
+    id_invernadero: Number(id_invernadero),
+    estado: editando ? editando.estado : "activo",
+  };
+
+  try {
+    let res;
+    if (editando) {
+     
+      res = await axios.put(`http://localhost:4000/api/zona/${editando.id_zona}`, payload);
+      console.log("PUT /api/zona response:", res.data);
+
+      const updatedZona = res.data?.zona ?? res.data;
+
+      const idCultivoFinal = (updatedZona && updatedZona.id_cultivo != null)
+        ? updatedZona.id_cultivo
+        : payload.id_cultivo ?? null;
+      setZonas(prev => prev.map(z =>
+        (z.id_zona === editando.id_zona)
+          ? { ...z, ...updatedZona, id_cultivo: idCultivoFinal }
+          : z
+      ));
+    } else {
+    
+      res = await axios.post("http://localhost:4000/api/zona", payload);
+      console.log("POST /api/zona response:", res.data);
+
+      const newZona = res.data?.zona ?? res.data;
+      if (newZona && newZona.id_cultivo == null) newZona.id_cultivo = payload.id_cultivo ?? null;
+
+      setZonas(prev => [...prev, newZona]);
+    }
+
+    setModalOpen(false);
+    setModalMessage({ show: true, success: true, title: "Operación Exitosa", message: `La zona "${payload.nombre}" se ha guardado correctamente.`});
+  } catch (error: any) {
+    console.error("Error guardando zona:", error);
+    setModalMessage({ show: true, success: false, title: "Error al Guardar", message: error.response?.data?.error || "Ocurrió un error inesperado."});
+  } finally {
+    setGuardando(false);
+  }
+};
+
+
+  
+  
   const cambiarEstado = (zona: Zona, nuevoEstado: string) => {
     setModalConfirm({
         show: true,
@@ -307,6 +330,7 @@ export default function ZonasPage() {
                  </div>
                  <p className="text-sm text-slate-500 mb-4 h-10 line-clamp-2">{zona.descripciones_add}</p>
                  <div className="text-sm space-y-2 mb-4">
+                  
                     <div className="flex items-center gap-2 text-slate-600"><Sprout className="w-4 h-4"/><span>Cultivo: <span className="font-semibold">{cultivosDisponibles.find(c => c.id_cultivo === Number(zona.id_cultivo))?.nombre_cultivo || 'No asignado'}</span></span></div>
                     <div className="flex items-center gap-2"><StatusBadge estado={zona.estado} /></div>
                  </div>
