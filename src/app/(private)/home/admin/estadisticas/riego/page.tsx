@@ -1,5 +1,7 @@
 'use client';
+
 import React, { useState, useEffect } from "react";
+
 import {
   LineChart,
   Line,
@@ -13,8 +15,23 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Droplets, Sun, Leaf, AlertCircle, X } from "lucide-react";
-import { FaClock } from "react-icons/fa";
+import { Droplets, Sun, Leaf, AlertCircle, X, Clock } from "lucide-react";
+
+// INTERFAZ SOLO PARA EL HISTORIAL DE RIEGO
+interface HistorialRiego {
+  id_historial_riego: number;
+  id_pg_riego: number;
+  id_zona: number;
+  duracion_minutos: number;
+  fecha_activacion: string;
+}
+
+// 🟢🟢🟢 INTERFACES PARA LOS DATOS DE ESTADÍSTICAS 🟢🟢🟢
+interface EstadisticasZonas {
+  activo: number;
+  inactivo: number;
+  mantenimiento: number;
+}
 
 interface Invernadero {
   id_invernadero: number;
@@ -26,6 +43,7 @@ interface Zona {
   nombre: string;
 }
 
+// 🟢🟢🟢 DATOS DE PRUEBA 🟢🟢🟢
 const datosRiegoMockData = {
   Dia: [
     { dia: "Lun", riego: 4 },
@@ -46,26 +64,15 @@ const datosRiegoMockData = {
   ],
 };
 
-const zonasEstadoMockData = [
-  { nombre: "Activas", valor: 10 },
-  { nombre: "Inactivas", valor: 3 },
-  { nombre: "Mantenimiento", valor: 2 },
-];
-
 const coloresPie = ["#4581dbff", "#10B981", "#22D3EE"];
-
-const historialMockData = [
-  { fecha: "20/07", invernadero: "Inv-1", zona: "Zona 1", tipo: "Riego", accion: "Activado", estado: "Completado" },
-  { fecha: "20/07", invernadero: "Inv-2", zona: "Zona 2", tipo: "Riego", accion: "Desactivado", estado: "Pendiente" },
-  { fecha: "19/07", invernadero: "Inv-1", zona: "Zona 3", tipo: "Riego", accion: "Activado", estado: "OK" },
-];
 
 const sensorDataMockData = [
   { icon: <Sun size={20} className="text-yellow-500" />, titulo: "Temperatura Ambiental", valor: "28°C", descripcion: "Lectura actual desde sensores exteriores." },
   { icon: <Droplets size={20} className="text-blue-500" />, titulo: "Humedad del Suelo", valor: "60%", descripcion: "Promedio semanal de humedad del suelo." },
-  { icon: <FaClock size={20} className="text-emerald-500" />, titulo: "Tiempo de Riego Diario", valor: "2 h", descripcion: "Tiempo total acumulado hoy." },
+  { icon: <Clock size={20} className="text-emerald-500" />, titulo: "Tiempo de Riego Diario", valor: "2 h", descripcion: "Tiempo total acumulado hoy." },
 ];
 
+// 🟢🟢🟢 COMPONENTE CARD 🟢🟢🟢
 function Card({
   title,
   value,
@@ -89,6 +96,7 @@ function Card({
   );
 }
 
+// 🟢🟢🟢 COMPONENTE SENSORCARD 🟢🟢🟢
 function SensorCard({ icon, titulo, valor, descripcion }: { icon: React.ReactNode; titulo: string; valor: string; descripcion: string }) {
   return (
     <div className="bg-gray-100 border border-gray-200 p-4 rounded-xl shadow-sm flex gap-4 items-start">
@@ -102,6 +110,7 @@ function SensorCard({ icon, titulo, valor, descripcion }: { icon: React.ReactNod
   );
 }
 
+// 🟢🟢🟢 COMPONENTE MODALCONTENT 🟢🟢🟢
 interface ModalContentProps {
   title: string;
   data: Invernadero[] | Zona[];
@@ -128,7 +137,8 @@ function ModalContent({ title, data, dataType, isLoading }: ModalContentProps) {
   );
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+// 🟢 URL DEL BACKEND 🟢
+const BACKEND_URL = 'http://localhost:4000';
 
 const App = () => {
   const [filtro, setFiltro] = useState<"Dia" | "Semana" | "Mes">("Dia");
@@ -137,9 +147,14 @@ const App = () => {
   const [modalData, setModalData] = useState<Invernadero[] | Zona[]>([]);
   const [modalDataType, setModalDataType] = useState<'invernaderos' | 'zonas'>('invernaderos');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [invernaderosActivosCount, setInvernaderosActivosCount] = useState(0);
   const [zonasActivasCount, setZonasActivasCount] = useState(0);
+
+  const [zonasEstadisticas, setZonasEstadisticas] = useState<{ nombre: string; valor: number; }[]>([]);
+
+  // 🟢 ESTADO SOLO PARA HISTORIAL DE RIEGO 🟢
+  const [historialRiego, setHistorialRiego] = useState<HistorialRiego[]>([]);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -149,7 +164,7 @@ const App = () => {
           const invernaderos = await invernaderosRes.json();
           setInvernaderosActivosCount(invernaderos.length);
         }
-        
+
         const zonasRes = await fetch(`${BACKEND_URL}/api/zona/datos-activos`);
         if (zonasRes.ok) {
           const zonas = await zonasRes.json();
@@ -159,7 +174,41 @@ const App = () => {
         console.error('Error al obtener los conteos:', error);
       }
     };
+
+    const fetchEstadisticasZonas = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/zona/estadisticas`);
+        if (res.ok) {
+          const stats: EstadisticasZonas = await res.json();
+
+          const formattedData = [
+            { nombre: "Activas", valor: stats.activo },
+            { nombre: "Inactivas", valor: stats.inactivo },
+            { nombre: "Mantenimiento", valor: stats.mantenimiento },
+          ].filter(data => data.valor > 0);
+
+          setZonasEstadisticas(formattedData);
+        }
+      } catch (error) {
+        console.error('Error al obtener estadísticas de zonas:', error);
+      }
+    };
+    
+    // 🟢 SOLO HISTORIAL DE RIEGO 🟢
+    const fetchHistorialRiego = async () => {
+      try {
+        const riegoRes = await fetch(`${BACKEND_URL}/api/historialRiego/`);
+        const riegoData: HistorialRiego[] = riegoRes.ok ? await riegoRes.json() : [];
+        setHistorialRiego(riegoData);
+      } catch (error) {
+        console.error('Error al obtener historial de riego:', error);
+        setHistorialRiego([]);
+      }
+    };
+
     fetchCounts();
+    fetchEstadisticasZonas();
+    fetchHistorialRiego();
   }, []);
 
   const fetchInvernaderosActivos = async () => {
@@ -259,51 +308,62 @@ const App = () => {
         <div className="bg-white shadow-lg rounded-xl p-6">
           <h2 className="font-semibold text-xl mb-4 text-gray-800">Estado de Zonas</h2>
           <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie data={zonasEstadoMockData} dataKey="valor" nameKey="nombre" outerRadius={80} label>
-                {zonasEstadoMockData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={coloresPie[index % coloresPie.length]} />
-                ))}
-              </Pie>
-              <Legend />
-            </PieChart>
+            {zonasEstadisticas.length > 0 ? (
+              <PieChart>
+                <Pie data={zonasEstadisticas} dataKey="valor" nameKey="nombre" outerRadius={80} label>
+                  {zonasEstadisticas.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={coloresPie[index % coloresPie.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-500">
+                <p>No hay datos de zonas para mostrar.</p>
+              </div>
+            )}
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white shadow-lg rounded-xl p-6 overflow-auto">
-          <h2 className="font-semibold text-xl mb-4 text-gray-800">Historial de Eventos</h2>
-          <table className="w-full text-sm">
-            <thead className="text-gray-600">
-              <tr className="bg-gray-100">
-                <th className="py-2 px-2 text-left rounded-tl-lg">Fecha</th>
-                <th className="py-2 px-2 text-left">Invernadero</th>
-                <th className="py-2 px-2 text-left">Zona</th>
-                <th className="py-2 px-2 text-left">Tipo</th>
-                <th className="py-2 px-2 text-left">Acción</th>
-                <th className="py-2 px-2 text-left rounded-tr-lg">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historialMockData.map((item, i) => (
-                <tr key={i} className="border-t border-gray-200 hover:bg-gray-50 transition-colors">
-                  <td className="py-2 px-2">{item.fecha}</td>
-                  <td className="py-2 px-2">{item.invernadero}</td>
-                  <td className="py-2 px-2">{item.zona}</td>
-                  <td className="py-2 px-2">{item.tipo}</td>
-                  <td className="py-2 px-2">{item.accion}</td>
-                  <td className="py-2 px-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      item.estado === 'Completado' ? 'bg-green-100 text-green-800' :
-                      item.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {item.estado}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* CONTENEDOR CON SCROLL PARA LA TABLA */}
+        <div className="bg-white shadow-lg rounded-xl p-6 flex flex-col">
+          <h2 className="font-semibold text-xl mb-4 text-gray-800">Historial de Eventos (Riego)</h2>
+          {historialRiego.length > 0 ? (
+            // CONTENEDOR DE LA TABLA CON SCROLL Y ALTURA FIJA
+            <div className="overflow-y-auto max-h-80"> 
+              <table className="w-full text-sm">
+                <thead className="text-gray-600 sticky top-0 bg-white"> 
+                  <tr className="bg-gray-100">
+                    <th className="py-2 px-2 text-left rounded-tl-lg">Fecha</th>
+                    <th className="py-2 px-2 text-left">Zona ID</th>
+                    <th className="py-2 px-2 text-left">Duración (min)</th>
+                    <th className="py-2 px-2 text-left rounded-tr-lg">Programación ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historialRiego.map((item, i) => (
+                    <tr key={i} className="border-t border-gray-200 hover:bg-gray-50 transition-colors">
+                      <td className="py-2 px-2">
+                        {new Date(item.fecha_activacion).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })}
+                      </td>
+                      <td className="py-2 px-2">{item.id_zona}</td>
+                      <td className="py-2 px-2">{item.duracion_minutos}</td>
+                      <td className="py-2 px-2">{item.id_pg_riego}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-500 py-10">
+              <p className="text-center">No hay eventos de riego para mostrar.</p>
+            </div>
+          )}
         </div>
       </div>
 
