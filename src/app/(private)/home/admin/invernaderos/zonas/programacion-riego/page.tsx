@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import api from '../../../../../../services/api';
+import { Plus, Edit2, Play, StopCircle, X } from "lucide-react";
 
 interface ProgramacionRiego {
   id_pg_riego: number;
@@ -21,33 +22,25 @@ export default function ProgramacionRiego() {
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [programaciones, setProgramaciones] = useState<ProgramacionRiego[]>([]);
   const [estadosDetenidos, setEstadosDetenidos] = useState<{ [key: number]: boolean }>({});
-
   const [form, setForm] = useState({
     fecha_inicio: "",
     fecha_finalizacion: "",
     descripcion: "",
     tipo_riego: "",
   });
-
   const [modalOpen, setModalOpen] = useState(false);
 
   const obtenerProgramaciones = async () => {
     try {
       const response = await api.get('/programacionRiego');
       const todas = response.data;
-
-      if (!Array.isArray(todas)) {
-        console.error("La respuesta del backend no es un array:", todas);
-        return;
-      }
+      if (!Array.isArray(todas)) return;
 
       const ahora = new Date();
-
       const filtradas = todas.filter((p: ProgramacionRiego) => {
         const fechaFinal = new Date(p.fecha_finalizacion);
         return p.id_zona === zonaId && fechaFinal > ahora;
       });
-
       setProgramaciones(filtradas);
 
       const nuevosEstados: { [key: number]: boolean } = {};
@@ -61,17 +54,12 @@ export default function ProgramacionRiego() {
   };
 
   useEffect(() => {
-    if (zonaId) {
-      obtenerProgramaciones();
-    }
+    if (zonaId) obtenerProgramaciones();
   }, [zonaId]);
 
   const convertirFechaParaInput = (fechaString: string) => {
     const fecha = new Date(fechaString);
-    if (isNaN(fecha.getTime())) {
-      console.error("Fecha inválida:", fechaString);
-      return "";
-    }
+    if (isNaN(fecha.getTime())) return "";
     const year = fecha.getFullYear();
     const month = String(fecha.getMonth() + 1).padStart(2, '0');
     const day = String(fecha.getDate()).padStart(2, '0');
@@ -96,7 +84,6 @@ export default function ProgramacionRiego() {
       alert("Por favor, completa todos los campos.");
       return;
     }
-
     if (editandoId === null) return;
 
     try {
@@ -107,7 +94,6 @@ export default function ProgramacionRiego() {
         tipo_riego: form.tipo_riego.toLowerCase(),
         id_zona: zonaId,
       };
-
       await api.put(`/programacionRiego/${editandoId}`, actualizada);
       await obtenerProgramaciones();
       setForm({ fecha_inicio: "", fecha_finalizacion: "", descripcion: "", tipo_riego: "" });
@@ -133,7 +119,6 @@ export default function ProgramacionRiego() {
         tipo_riego: form.tipo_riego.toLowerCase(),
         id_zona: zonaId,
       };
-
       await api.post('/programacionRiego', nueva);
       await obtenerProgramaciones();
       setForm({ fecha_inicio: "", fecha_finalizacion: "", descripcion: "", tipo_riego: "" });
@@ -147,15 +132,8 @@ export default function ProgramacionRiego() {
   const detenerRiego = async (id: number) => {
     const nuevoEstado = !estadosDetenidos[id];
     try {
-      await api.patch(`/programacionRiego/${id}/estado`, {
-        activo: !nuevoEstado,
-      });
-
-      setEstadosDetenidos(prev => ({
-        ...prev,
-        [id]: nuevoEstado,
-      }));
-
+      await api.patch(`/programacionRiego/${id}/estado`, { activo: !nuevoEstado });
+      setEstadosDetenidos(prev => ({ ...prev, [id]: nuevoEstado }));
       await obtenerProgramaciones();
     } catch (error) {
       console.error("Error al cambiar estado de programación:", error);
@@ -164,42 +142,61 @@ export default function ProgramacionRiego() {
   };
 
   return (
-    <main className="container mx-auto py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
-      <h1 className="text-5xl font-bold text-darkGreen-900 mb-8 text-center md:text-left">
-        Programación de Riego - Zona {zonaId}
-      </h1>
+    <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
+      {/* Header y botón Crear */}
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
+        <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">
+          Programación de Riego - Zona {zonaId}
+        </h1>
+        <button
+          onClick={() => { setEditandoId(null); setForm({ fecha_inicio: "", fecha_finalizacion: "", descripcion: "", tipo_riego: "" }); setModalOpen(true); }}
+          className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+        >
+          <Plus className="w-5 h-5" />
+          Crear Programación
+        </button>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-        {programaciones.map((p) => {
+      {/* Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {programaciones.map(p => {
           const detenido = estadosDetenidos[p.id_pg_riego] ?? false;
-
           return (
-            <div key={p.id_pg_riego} className="bg-white rounded-2xl shadow-green p-6 flex flex-col gap-4">
-              <p className="text-lg font-semibold text-greenSecondary-900">
-                Activación: <span className="font-normal text-darkGreen-700">{convertirFechaParaInput(p.fecha_inicio)}</span>
-              </p>
-              <p className="text-lg font-semibold text-greenSecondary-900">
-                Desactivación: <span className="font-normal text-darkGreen-700">{convertirFechaParaInput(p.fecha_finalizacion)}</span>
-              </p>
-              <p className="text-gray-400">
-                Descripción: <span className="text-gray-800">{p.descripcion}</span>
-              </p>
-              <p className="text-sm text-darkGreen-900 font-medium">
-                Tipo: <span className="text-darkGreen-700">{p.tipo_riego}</span>
-              </p>
+            <div key={p.id_pg_riego} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
+              <div className="space-y-2">
+                <p className="text-sm text-slate-500">
+                  <span className="font-semibold text-slate-700">Activación:</span>{" "}
+                  <span className="text-slate-700">{convertirFechaParaInput(p.fecha_inicio)}</span>
+                </p>
+                <p className="text-sm text-slate-500">
+                  <span className="font-semibold text-slate-700">Desactivación:</span>{" "}
+                  <span className="text-slate-700">{convertirFechaParaInput(p.fecha_finalizacion)}</span>
+                </p>
+                <p className="text-sm text-slate-500">
+                  <span className="font-semibold text-slate-700">Descripción:</span>{" "}
+                  <span className="text-slate-700">{p.descripcion}</span>
+                </p>
+                <p className="text-sm text-slate-500">
+                  <span className="font-semibold text-slate-700">Tipo:</span>{" "}
+                  <span className="text-slate-700">{p.tipo_riego}</span>
+                </p>
+              </div>
 
-              <div className="flex justify-between gap-2 mt-4 pt-4 border-t border-gray-800 border-opacity-10">
+              <div className="mt-4 pt-4 border-t border-slate-200 flex gap-2">
                 <button
                   onClick={() => detenerRiego(p.id_pg_riego)}
-                  className={`${detenido ? "bg-green-600 hover:bg-green-700" : "bg-yellow-500 hover:bg-yellow-600"} text-white font-bold py-2 px-4 rounded-full transition duration-200`}
+                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white transition-colors ${
+                    detenido ? "bg-teal-600 hover:bg-teal-700" : "bg-yellow-500 hover:bg-yellow-600"
+                  }`}
                 >
+                  {detenido ? <Play className="w-4 h-4" /> : <StopCircle className="w-4 h-4" />}
                   {detenido ? "Reanudar" : "Detener"}
                 </button>
                 <button
                   onClick={() => editar(p)}
-                  className="bg-pink-500 hover:bg-pinkSecondary-900 text-white font-bold py-2 px-4 rounded-full transition duration-200"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold transition-colors"
                 >
-                  Editar
+                  <Edit2 className="w-4 h-4" /> Editar
                 </button>
               </div>
             </div>
@@ -207,72 +204,93 @@ export default function ProgramacionRiego() {
         })}
       </div>
 
-      <button
-        onClick={() => setModalOpen(true)}
-        className="bg-green-500 hover:bg-darkGreen-700 text-white font-bold py-3 px-6 rounded-full transition duration-200 ease-in-out shadow-green"
-      >
-        Crear Programación
-      </button>
-
+      {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-40 backdrop-blur-md bg-black/10 flex items-center justify-center">
-          <div className="bg-white rounded-3xl shadow-green p-8 w-full max-w-md">
-            <h2 className="text-3xl font-bold text-darkGreen-900 mb-6 text-center">
-              {editandoId ? 'Editar Programación' : 'Agregar Programación'}
-            </h2>
-            <h3>Fecha de inicio</h3>
-            <input
-              type="datetime-local"
-              value={form.fecha_inicio}
-              onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
-              className="w-full p-3 mb-4 border border-gray-800 border-opacity-20 rounded-md"
-            />
-            <h3>Fecha de finalización</h3>
-            <input
-              type="datetime-local"
-              value={form.fecha_finalizacion}
-              onChange={(e) => setForm({ ...form, fecha_finalizacion: e.target.value })}
-              className="w-full p-3 mb-4 border border-gray-800 border-opacity-20 rounded-md"
-            />
-            <input
-              type="text"
-              placeholder="Descripción"
-              value={form.descripcion}
-              onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-              className="w-full p-3 mb-4 border border-gray-800 border-opacity-20 rounded-md"
-            />
-            <select
-              value={form.tipo_riego}
-              onChange={(e) => setForm({ ...form, tipo_riego: e.target.value })}
-              className="w-full p-3 mb-6 border border-gray-800 border-opacity-20 rounded-md"
-            >
-              <option value="">Selecciona el tipo de riego</option>
-              <option value="Goteo">Goteo</option>
-              <option value="Aspersión">Aspersión</option>
-              <option value="Manual">Manual</option>
-            </select>
-            <div className="flex justify-end gap-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-200">
+              <h2 className="text-2xl font-bold text-slate-800">
+                {editandoId ? "Editar Programación" : "Agregar Programación"}
+              </h2>
               <button
                 onClick={() => setModalOpen(false)}
-                className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-5 rounded-full"
+                className="absolute top-4 right-4 p-2 text-slate-500 hover:bg-slate-100 rounded-full"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Fecha y hora de activación
+                </label>
+                <input
+                  type="datetime-local"
+                  value={form.fecha_inicio}
+                  onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
+                  className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Fecha y hora de finalización
+                </label>
+                <input
+                  type="datetime-local"
+                  value={form.fecha_finalizacion}
+                  onChange={(e) => setForm({ ...form, fecha_finalizacion: e.target.value })}
+                  className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Descripción
+                </label>
+                <input
+                  type="text"
+                  placeholder="Descripción"
+                  value={form.descripcion}
+                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                  className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Tipo de riego
+                </label>
+                <select
+                  value={form.tipo_riego}
+                  onChange={(e) => setForm({ ...form, tipo_riego: e.target.value })}
+                  className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="">Selecciona el tipo de riego</option>
+                  <option value="Goteo">Goteo</option>
+                  <option value="Aspersión">Aspersión</option>
+                  <option value="Manual">Manual</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="px-6 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-colors"
               >
                 Cancelar
               </button>
-              {editandoId ? (
-                <button
-                  onClick={actualizarProgramacion}
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-full"
-                >
-                  Actualizar
-                </button>
-              ) : (
-                <button
-                  onClick={agregar}
-                  className="bg-green-500 hover:bg-darkGreen-700 text-white font-bold py-2 px-5 rounded-full"
-                >
-                  Crear
-                </button>
-              )}
+              <button
+                onClick={editandoId ? actualizarProgramacion : agregar}
+                className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors ${
+                  editandoId ? "bg-teal-600 hover:bg-teal-700" : "bg-teal-500 hover:bg-teal-700"
+                }`}
+              >
+                {editandoId ? "Guardar Cambios" : "Crear"}
+              </button>
             </div>
           </div>
         </div>

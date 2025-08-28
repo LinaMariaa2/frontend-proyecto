@@ -14,6 +14,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import io from "socket.io-client";
+
 import {
   Plus,
   MoreVertical,
@@ -49,63 +51,72 @@ interface Cultivo {
   nombre_cultivo: string;
 }
 
+interface HumedadLectura {
+  actual: number;
+  min: number;
+  max: number;
+  timestamp: string;
+}
+
 const formInicial = { nombre: "", descripciones_add: "", id_cultivo: "" };
 
-// --- Modales Personalizados ---
-const ConfirmModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirmar", variant = "default" }) => (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
-            {variant === 'danger' ? <AlertTriangle className="w-16 h-16 mx-auto text-red-500 mb-4" /> : <Info className="w-16 h-16 mx-auto text-amber-500 mb-4" />}
-            <h3 className="text-xl font-bold text-slate-800 mb-2">{title}</h3>
-            <p className="text-slate-500 mb-8" dangerouslySetInnerHTML={{ __html: message }}></p>
-            <div className="flex justify-center gap-4">
-                <button onClick={onCancel} className="px-6 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-colors">Cancelar</button>
-                <button onClick={onConfirm} className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors ${variant === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-teal-600 hover:bg-teal-700'}`}>{confirmText}</button>
-            </div>
-        </div>
+// --- Modales ---
+const ConfirmModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirmar", variant = "default" }: any) => (
+  <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+      {variant === 'danger' ? <AlertTriangle className="w-16 h-16 mx-auto text-red-500 mb-4" /> : <Info className="w-16 h-16 mx-auto text-amber-500 mb-4" />}
+      <h3 className="text-xl font-bold text-slate-800 mb-2">{title}</h3>
+      <p className="text-slate-500 mb-8" dangerouslySetInnerHTML={{ __html: message }}></p>
+      <div className="flex justify-center gap-4">
+        <button onClick={onCancel} className="px-6 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-colors">Cancelar</button>
+        <button onClick={onConfirm} className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors ${variant === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-teal-600 hover:bg-teal-700'}`}>{confirmText}</button>
+      </div>
     </div>
+  </div>
 );
 
-const MessageModal = ({ title, message, onCerrar, success = true }) => (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
-            {success ? <CheckCircle2 className="w-16 h-16 mx-auto text-teal-500 mb-4" /> : <XCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />}
-            <h3 className="text-xl font-bold text-slate-800 mb-4">{title}</h3>
-            <p className="text-slate-500 mb-8">{message}</p>
-            <button onClick={onCerrar} className="w-full px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors">Entendido</button>
-        </div>
+const MessageModal = ({ title, message, onCerrar, success = true }: any) => (
+  <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+      {success ? <CheckCircle2 className="w-16 h-16 mx-auto text-teal-500 mb-4" /> : <XCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />}
+      <h3 className="text-xl font-bold text-slate-800 mb-4">{title}</h3>
+      <p className="text-slate-500 mb-8">{message}</p>
+      <button onClick={onCerrar} className="w-full px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors">Entendido</button>
     </div>
+  </div>
 );
 
-// --- Componente de Gráfica Reutilizable ---
-const ZonaChart = () => {
-  const data = [
-    { name: "30m", Ideal: 65, Actual: 55 },
-    { name: "20m", Ideal: 65, Actual: 52 },
-    { name: "10m", Ideal: 65, Actual: 50 },
-    { name: "Ahora", Ideal: 65, Actual: 48 },
-  ];
+// --- Gráfica ---
+const ZonaChart = ({ lecturas }: { lecturas: HumedadLectura[] }) => {
+  if (!lecturas || lecturas.length === 0) return <p className="text-sm text-slate-400">No hay datos disponibles</p>;
+
+  const data = lecturas.map(l => ({
+    name: new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    Actual: l.actual,
+    Min: l.min,
+    Max: l.max,
+  }));
 
   return (
     <div className="mt-4">
-        <h4 className="text-xs font-semibold text-slate-500 mb-2">Humedad Reciente (%)</h4>
-        {/* CAMBIO: Aumentada la altura del gráfico */}
-        <ResponsiveContainer width="100%" height={160}>
-            <LineChart data={data} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} domain={[40, 80]} />
-                <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', fontSize: '13px' }}/>
-                <Legend wrapperStyle={{fontSize: "13px"}}/>
-                <Line type="monotone" dataKey="Ideal" stroke="#a7f3d0" strokeWidth={3} dot={false} />
-                <Line type="monotone" dataKey="Actual" stroke="#14b8a6" strokeWidth={3} dot={{ r: 5 }} />
-            </LineChart>
-        </ResponsiveContainer>
+      <h4 className="text-xs font-semibold text-slate-500 mb-2">Humedad Reciente: {lecturas[lecturas.length - 1]?.actual ?? 0} % </h4>
+      <ResponsiveContainer width="100%" height={160}>
+        <LineChart data={data} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+          <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
+          <YAxis tick={{ fill: '#64748b', fontSize: 12 }} domain={[0, 100]} />
+          <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', fontSize: '13px' }}/>
+          <Legend wrapperStyle={{ fontSize: "13px" }}/>
+          <Line type="monotone" dataKey="Max" stroke="#a7f3d0" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="Min" stroke="#d1fae5" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="Actual" stroke="#14b8a6" strokeWidth={3} dot={{ r: 2 }} />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 };
 
-
+// --- Página ---
 export default function ZonasPage() {
   const searchParams = useSearchParams();
   const id_invernadero = searchParams.get("id_invernadero");
@@ -113,17 +124,19 @@ export default function ZonasPage() {
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [cultivosDisponibles, setCultivosDisponibles] = useState<Cultivo[]>([]);
   const [form, setForm] = useState(formInicial);
-  
+
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Zona | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
-  
-  const [modalConfirm, setModalConfirm] = useState<{ show: boolean; onConfirm: () => void; title: string; message: string; confirmText: string, variant: string }>({ show: false, onConfirm: () => {}, title: '', message: '', confirmText: 'Confirmar', variant: 'default' });
-  const [modalMessage, setModalMessage] = useState<{ show: boolean; title: string; message: string; success: boolean }>({ show: false, title: '', message: '', success: true });
-  
+
+  const [modalConfirm, setModalConfirm] = useState<any>({ show: false, onConfirm: () => {}, title: '', message: '', confirmText: 'Confirmar', variant: 'default' });
+  const [modalMessage, setModalMessage] = useState<any>({ show: false, title: '', message: '', success: true });
+
+  const [lecturas, setLecturas] = useState<{ [key: number]: HumedadLectura[] }>({});
+
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -146,7 +159,24 @@ export default function ZonasPage() {
     };
     fetchData();
   }, [id_invernadero]);
-  
+
+  // --- Socket.io ---
+  useEffect(() => {
+    const socket = io("http://localhost:4000");
+    socket.on("nuevaLectura", (data: any) => {
+      console.log("Lectura recibida:", data);
+      if (data.tipo_sensor === "humedad" && data.id_zona) {
+        setLecturas(prev => {
+          const zonaLecturas = prev[data.id_zona] ? [...prev[data.id_zona]] : [];
+          zonaLecturas.push({ actual: data.valor, min: data.min ?? 40, max: data.max ?? 70, timestamp: data.timestamp });
+          if (zonaLecturas.length > 20) zonaLecturas.shift();
+          return { ...prev, [data.id_zona]: zonaLecturas };
+        });
+      }
+    });
+    return () => { socket.disconnect(); };
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -159,132 +189,115 @@ export default function ZonasPage() {
 
   const abrirModal = (zona: Zona | null = null) => {
     if (zona) {
-  setEditando(zona);
-  setForm({
-    nombre: zona.nombre,
-    descripciones_add: zona.descripciones_add,
-    id_cultivo: zona.id_cultivo != null ? String(zona.id_cultivo) : "",
-  });
+      setEditando(zona);
+      setForm({
+        nombre: zona.nombre,
+        descripciones_add: zona.descripciones_add,
+        id_cultivo: zona.id_cultivo != null ? String(zona.id_cultivo) : "",
+      });
     } else {
-        setEditando(null);
-        setForm(formInicial);
+      setEditando(null);
+      setForm(formInicial);
     }
     setModalOpen(true);
-  }
-
-  const handleFormSubmit = async () => {
-  if (!form.nombre.trim() || !form.descripciones_add.trim()) {
-    setModalMessage({ show: true, success: false, title: "Campos Incompletos", message: "El nombre y la descripción son obligatorios." });
-    return;
-  }
-  setGuardando(true);
-
-  const payload = {
-    nombre: form.nombre.trim(),
-    descripciones_add: form.descripciones_add.trim(),
-    id_cultivo: form.id_cultivo ? Number(form.id_cultivo) : null,
-    id_invernadero: Number(id_invernadero),
-    estado: editando ? editando.estado : "activo",
   };
 
-  try {
-    let res;
-    if (editando) {
-     
-      res = await axios.put(`http://localhost:4000/api/zona/${editando.id_zona}`, payload);
-      console.log("PUT /api/zona response:", res.data);
-
-      const updatedZona = res.data?.zona ?? res.data;
-
-      const idCultivoFinal = (updatedZona && updatedZona.id_cultivo != null)
-        ? updatedZona.id_cultivo
-        : payload.id_cultivo ?? null;
-      setZonas(prev => prev.map(z =>
-        (z.id_zona === editando.id_zona)
-          ? { ...z, ...updatedZona, id_cultivo: idCultivoFinal }
-          : z
-      ));
-    } else {
-    
-      res = await axios.post("http://localhost:4000/api/zona", payload);
-      console.log("POST /api/zona response:", res.data);
-
-      const newZona = res.data?.zona ?? res.data;
-      if (newZona && newZona.id_cultivo == null) newZona.id_cultivo = payload.id_cultivo ?? null;
-
-      setZonas(prev => [...prev, newZona]);
+  const handleFormSubmit = async () => {
+    if (!form.nombre.trim() || !form.descripciones_add.trim()) {
+      setModalMessage({ show: true, success: false, title: "Campos Incompletos", message: "El nombre y la descripción son obligatorios." });
+      return;
     }
+    setGuardando(true);
 
-    setModalOpen(false);
-    setModalMessage({ show: true, success: true, title: "Operación Exitosa", message: `La zona "${payload.nombre}" se ha guardado correctamente.`});
-  } catch (error: any) {
-    console.error("Error guardando zona:", error);
-    setModalMessage({ show: true, success: false, title: "Error al Guardar", message: error.response?.data?.error || "Ocurrió un error inesperado."});
-  } finally {
-    setGuardando(false);
-  }
-};
+    const payload = {
+      nombre: form.nombre.trim(),
+      descripciones_add: form.descripciones_add.trim(),
+      id_cultivo: form.id_cultivo ? Number(form.id_cultivo) : null,
+      id_invernadero: Number(id_invernadero),
+      estado: editando ? editando.estado : "activo",
+    };
 
+    try {
+      let res;
+      if (editando) {
+        res = await axios.put(`http://localhost:4000/api/zona/${editando.id_zona}`, payload);
+        const updatedZona = res.data?.zona ?? res.data;
+        const idCultivoFinal = updatedZona?.id_cultivo ?? payload.id_cultivo ?? null;
+        setZonas(prev => prev.map(z => z.id_zona === editando.id_zona ? { ...z, ...updatedZona, id_cultivo: idCultivoFinal } : z));
+      } else {
+        res = await axios.post("http://localhost:4000/api/zona", payload);
+        const newZona = res.data?.zona ?? res.data;
+        if (newZona && newZona.id_cultivo == null) newZona.id_cultivo = payload.id_cultivo ?? null;
+        setZonas(prev => [...prev, newZona]);
+      }
 
-  
-  
+      setModalOpen(false);
+      setModalMessage({ show: true, success: true, title: "Operación Exitosa", message: `La zona "${payload.nombre}" se ha guardado correctamente.`});
+    } catch (error: any) {
+      console.error("Error guardando zona:", error);
+      setModalMessage({ show: true, success: false, title: "Error al Guardar", message: error.response?.data?.error || "Ocurrió un error inesperado."});
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   const cambiarEstado = (zona: Zona, nuevoEstado: string) => {
     setModalConfirm({
-        show: true,
-        title: `Cambiar Estado`,
-        message: `¿Seguro que quieres cambiar el estado de la zona <strong>${zona.nombre}</strong> a <strong>${nuevoEstado}</strong>?`,
-        confirmText: 'Confirmar',
-        variant: 'default',
-        onConfirm: async () => {
-            try {
-                const ruta = {"activo": "activar", "inactivo": "inactivar", "mantenimiento": "mantenimiento"}[nuevoEstado];
-                await axios.patch(`http://localhost:4000/api/zona/${ruta}/${zona.id_zona}`);
-                setZonas(zonas.map(z => z.id_zona === zona.id_zona ? {...z, estado: nuevoEstado as any} : z));
-                setModalMessage({ show: true, success: true, title: "Estado Actualizado", message: `El estado de la zona ha sido actualizado a ${nuevoEstado}.` });
-            } catch (error: any) {
-                setModalMessage({ show: true, success: false, title: "Error", message: error.response?.data?.error || "No se pudo cambiar el estado." });
-            } finally {
-                setModalConfirm({ ...modalConfirm, show: false });
-                setMenuOpenId(null);
-            }
+      show: true,
+      title: `Cambiar Estado`,
+      message: `¿Seguro que quieres cambiar el estado de la zona <strong>${zona.nombre}</strong> a <strong>${nuevoEstado}</strong>?`,
+      confirmText: 'Confirmar',
+      variant: 'default',
+      onConfirm: async () => {
+        try {
+          const ruta = {"activo": "activar", "inactivo": "inactivar", "mantenimiento": "mantenimiento"}[nuevoEstado];
+          await axios.patch(`http://localhost:4000/api/zona/${ruta}/${zona.id_zona}`);
+          setZonas(zonas.map(z => z.id_zona === zona.id_zona ? {...z, estado: nuevoEstado as any} : z));
+          setModalMessage({ show: true, success: true, title: "Estado Actualizado", message: `El estado de la zona ha sido actualizado a ${nuevoEstado}.` });
+        } catch (error: any) {
+          setModalMessage({ show: true, success: false, title: "Error", message: error.response?.data?.error || "No se pudo cambiar el estado." });
+        } finally {
+          setModalConfirm({ ...modalConfirm, show: false });
+          setMenuOpenId(null);
         }
+      }
     });
   };
 
   const eliminarZona = (zona: Zona) => {
     if (zona.estado !== 'inactivo') {
-        setModalMessage({ show: true, success: false, title: "Acción no permitida", message: `Solo se pueden eliminar zonas con estado "Inactivo". El estado actual es "${zona.estado}".` });
-        setMenuOpenId(null);
-        return;
+      setModalMessage({ show: true, success: false, title: "Acción no permitida", message: `Solo se pueden eliminar zonas con estado "Inactivo". El estado actual es "${zona.estado}".` });
+      setMenuOpenId(null);
+      return;
     }
     setModalConfirm({
-        show: true,
-        title: "Eliminar Zona",
-        message: `Esta acción es permanente y no se puede deshacer. ¿Seguro que quieres eliminar la zona <strong>${zona.nombre}</strong>?`,
-        confirmText: "Eliminar",
-        variant: 'danger',
-        onConfirm: async () => {
-            try {
-                await axios.delete(`http://localhost:4000/api/zona/${zona.id_zona}`);
-                setZonas(zonas.filter(z => z.id_zona !== zona.id_zona));
-                setModalMessage({ show: true, success: true, title: "Zona Eliminada", message: "La zona ha sido eliminada correctamente." });
-            } catch (error: any) {
-                setModalMessage({ show: true, success: false, title: "Error al Eliminar", message: error.response?.data?.error || "Ocurrió un error." });
-            } finally {
-                setModalConfirm({ ...modalConfirm, show: false });
-                setMenuOpenId(null);
-            }
+      show: true,
+      title: "Eliminar Zona",
+      message: `Esta acción es permanente y no se puede deshacer. ¿Seguro que quieres eliminar la zona <strong>${zona.nombre}</strong>?`,
+      confirmText: "Eliminar",
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await axios.delete(`http://localhost:4000/api/zona/${zona.id_zona}`);
+          setZonas(zonas.filter(z => z.id_zona !== zona.id_zona));
+          setModalMessage({ show: true, success: true, title: "Zona Eliminada", message: "La zona ha sido eliminada correctamente." });
+        } catch (error: any) {
+          setModalMessage({ show: true, success: false, title: "Error al Eliminar", message: error.response?.data?.error || "Ocurrió un error." });
+        } finally {
+          setModalConfirm({ ...modalConfirm, show: false });
+          setMenuOpenId(null);
         }
+      }
     });
   };
 
-  const StatusBadge = ({ estado }) => {
+  const StatusBadge = ({ estado }: { estado: string }) => {
     const config = {
       activo: { text: "Activo", color: "bg-green-100 text-green-800", icon: <CheckCircle2 className="w-3 h-3" /> },
       inactivo: { text: "Inactivo", color: "bg-slate-100 text-slate-600", icon: <XCircle className="w-3 h-3" /> },
       mantenimiento: { text: "Mantenimiento", color: "bg-amber-100 text-amber-800", icon: <Wrench className="w-3 h-3" /> },
     };
-    const current = config [estado] || config.inactivo;
+    const current = config[estado] || config.inactivo;
     return <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${current.color}`}>{current.icon}{current.text}</span>;
   };
 
@@ -330,11 +343,10 @@ export default function ZonasPage() {
                  </div>
                  <p className="text-sm text-slate-500 mb-4 h-10 line-clamp-2">{zona.descripciones_add}</p>
                  <div className="text-sm space-y-2 mb-4">
-                  
                     <div className="flex items-center gap-2 text-slate-600"><Sprout className="w-4 h-4"/><span>Cultivo: <span className="font-semibold">{cultivosDisponibles.find(c => c.id_cultivo === Number(zona.id_cultivo))?.nombre_cultivo || 'No asignado'}</span></span></div>
                     <div className="flex items-center gap-2"><StatusBadge estado={zona.estado} /></div>
                  </div>
-                 <ZonaChart />
+                 <ZonaChart lecturas={lecturas[zona.id_zona] || []} /> {/* --- NUEVO: lecturas por zona */}
               </div>
               <div className="mt-auto border-t border-slate-200 bg-slate-50 p-4 grid grid-cols-2 gap-3">
                  <Link href={`/home/admin/invernaderos/zonas/programacion-riego?id=${zona.id_zona}`} className="text-center font-semibold bg-blue-100 text-blue-800 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-blue-200 transition-colors">
