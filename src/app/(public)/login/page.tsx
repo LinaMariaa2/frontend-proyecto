@@ -45,7 +45,7 @@ export default function LoginPage() {
 
         try {
            
-            const response = await api.post('/api/auth/login', {
+            const response = await api.post('/auth/login', {
                 correo: email,
                 contrasena: password,
             });
