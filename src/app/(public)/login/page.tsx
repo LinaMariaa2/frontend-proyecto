@@ -44,9 +44,8 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            // AQUÍ ESTÁ LA CORRECCIÓN
-            // Se quita el '/api' ya que tu archivo 'api.ts' ya lo incluye en la baseURL
-            const response = await api.post('/auth/login', {
+           
+            const response = await api.post('/api/auth/login', {
                 correo: email,
                 contrasena: password,
             });
