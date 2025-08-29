@@ -4,7 +4,10 @@ import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Link from "next/link";
 // CAMBIO: Iconografía consistente con lucide-react
+
+//comentarios de ensayo
 import {
+
   Search,
   Plus,
   MoreVertical,
