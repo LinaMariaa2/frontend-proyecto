@@ -84,19 +84,25 @@ const ConfirmModal = ({
 );
 
 const MessageModal = ({ mensaje, onCerrar }: { mensaje: string; onCerrar: () => void }) => (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
-            <CheckCircle2 className="w-16 h-16 mx-auto text-teal-500 mb-4" />
-            <h3 className="text-xl font-bold text-slate-800 mb-4">Operación Exitosa</h3>
-            <p className="text-slate-500 mb-8">{mensaje}</p>
-            <button
-                onClick={onCerrar}
-                className="w-full px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors"
-            >
-                Entendido
-            </button>
-        </div>
+  <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+      {mensaje.includes("90 minutos") ? (
+        <AlertTriangle className="w-16 h-16 mx-auto text-amber-500 mb-4" />
+      ) : (
+        <CheckCircle2 className="w-16 h-16 mx-auto text-teal-500 mb-4" />
+      )}
+      <h3 className="text-xl font-bold text-slate-800 mb-4">
+        {mensaje.includes("90 minutos") ? "Aviso" : "Operación Exitosa"}
+      </h3>
+      <p className="text-slate-500 mb-8">{mensaje}</p>
+      <button
+        onClick={onCerrar}
+        className="w-full px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors"
+      >
+        Entendido
+      </button>
     </div>
+  </div>
 );
 
 // --- Componente Principal de la Página de Bitácora ---
@@ -174,7 +180,7 @@ export default function BitacoraPage() {
       const minutosPasados = (ahora.getTime() - tiempoCreacion.getTime()) / 1000 / 60;
       if (minutosPasados > 90) {
         setModalMensaje("No puedes editar publicaciones con más de 90 minutos de antigüedad.");
-        return;
+        return; // aviso rápido y no abre modal de edición
       }
       setForm(pub);
       setEditando(true);
@@ -253,7 +259,6 @@ export default function BitacoraPage() {
       if (filtroActivo === "etiqueta") return pub.tipo_evento?.toLowerCase().includes(valor);
       return true;
   });
-
   return (
     <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
       <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
@@ -273,7 +278,7 @@ export default function BitacoraPage() {
             className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
-            <span>Crear Entrada</span>
+            <span>Nueva Bitacora</span>
           </button>
         </div>
       </div>

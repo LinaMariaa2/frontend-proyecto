@@ -138,31 +138,43 @@ export default function InvernaderosPage() {
   }, []);
 
   useEffect(() => {
-    const obtenerResponsables = async () => {
-      if (!busquedaResponsable.trim()) {
-        setResponsables([]);
-        return;
-      }
-      try {
-        const response = await axios.get(`http://localhost:4000/api/persona?filtro=${encodeURIComponent(busquedaResponsable)}`);
-        setResponsables(Array.isArray(response.data) ? response.data : []);
-      } catch (error) {
+  if (!busquedaResponsable.trim()) {
+    setResponsables([]);
+    return;
+  }
+
+  const controller = new AbortController(); // 👉 para cancelar si cambia rápido
+  const debounce = setTimeout(async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:4000/api/persona?filtro=${encodeURIComponent(busquedaResponsable)}`,
+        { signal: controller.signal }
+      );
+      setResponsables(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      if (!axios.isCancel(error)) {
         console.error("Error al obtener responsables:", error);
       }
-    };
-    const debounce = setTimeout(obtenerResponsables, 300);
-    return () => clearTimeout(debounce);
-  }, [busquedaResponsable]);
+    }
+  }, 400); // un poquito más de debounce
+
+  return () => {
+    controller.abort();
+    clearTimeout(debounce);
+  };
+}, [busquedaResponsable]);
+
 
   useEffect(() => {
-    const manejarClickFuera = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpenId(null);
-      }
-    };
-    document.addEventListener("mousedown", manejarClickFuera);
-    return () => document.removeEventListener("mousedown", manejarClickFuera);
-  }, []);
+  const manejarClickFuera = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setMenuOpenId(null);
+    }
+  };
+  document.addEventListener("mousedown", manejarClickFuera);
+  return () => document.removeEventListener("mousedown", manejarClickFuera);
+}, []);
+
 
   const abrirModal = (inv: Invernadero | null = null) => {
     if (inv) {
