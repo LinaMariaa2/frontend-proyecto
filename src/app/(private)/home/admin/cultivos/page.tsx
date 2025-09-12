@@ -34,6 +34,8 @@ interface Cultivo {
   humedad_max: number;
   fecha_inicio: string;
   fecha_fin: string | null;
+  responsable_id: number;
+  encargado?: Responsable;
   imagenes: string | null;
   estado: "activo" | "finalizado";
   cantidad_cosechada: number | null;
@@ -41,6 +43,12 @@ interface Cultivo {
   cantidad_reservada: number | null;
   unidad_medida?: "kilogramos" | "unidades"; 
 
+}
+interface Responsable {
+  id_persona: number;
+  nombre_usuario: string;
+  rol: string;
+  estado: string;
 }
 
 // --- Modales Personalizados ---
@@ -83,6 +91,11 @@ export default function CultivosPage() {
   const [modalMessage, setModalMessage] = useState<{ show: boolean; title: string; message: string; success: boolean }>({ show: false, title: '', message: '', success: true });
   const [modalProduccion, setModalProduccion] = useState(false);
   const [cultivoSeleccionado, setCultivoSeleccionado] = useState<number | null>(null);
+  const [responsables, setResponsables] = useState<Responsable[]>([]);
+  const [busquedaResponsable, setBusquedaResponsable] = useState("");
+  const [responsableSeleccionado, setResponsableSeleccionado] = useState<Responsable | null>(null);
+  const [errores, setErrores] = useState<{ [key: string]: string }>({});
+  const [responsablesIniciales, setResponsablesIniciales] = useState<Responsable[]>([]);
 
   const [form, setForm] = useState({
     nombre_cultivo: "",
@@ -93,6 +106,7 @@ export default function CultivosPage() {
     humedad_max: "",
     fecha_inicio: "",
     fecha_fin: "",
+    responsable_id: 0
   });
 
   const [form2, setForm2]= useState({
@@ -121,25 +135,58 @@ export default function CultivosPage() {
 };
 
 
-  const guardarProduccion = async () => {
+const guardarProduccion = async () => {
   if (cultivoSeleccionado == null) {
-    setModalMessage({ show: true, title: "Error", message: "No se identificó el cultivo seleccionado.", success: false });
+    setModalMessage({
+      show: true,
+      title: "Error",
+      message: "No se identificó el cultivo seleccionado.",
+      success: false,
+    });
     return;
   }
+
   if (
     form2.cantidad_cosechada === "" ||
     form2.cantidad_disponible === "" ||
     form2.cantidad_reservada === ""
   ) {
-    setModalMessage({ show: true, title: "Campos Incompletos", message: "Completa todos los campos de producción.", success: false });
+    setModalMessage({
+      show: true,
+      title: "Campos Incompletos",
+      message: "Completa todos los campos de producción.",
+      success: false,
+    });
     return;
   }
+
   if (!form2.unidad_medida) {
-    setModalMessage({ show: true, title: "Falta la unidad", message: "Selecciona la unidad de medida (kilogramos o unidades).", success: false });
+    setModalMessage({
+      show: true,
+      title: "Falta la unidad",
+      message: "Selecciona la unidad de medida (kilogramos o unidades).",
+      success: false,
+    });
+    return;
+  }
+
+  // 🚫 Validar que no sean negativos
+  if (
+    Number(form2.cantidad_cosechada) < 0 ||
+    Number(form2.cantidad_disponible) < 0 ||
+    Number(form2.cantidad_reservada) < 0
+  ) {
+    setModalMessage({
+      show: true,
+      title: "Valores inválidos",
+      message: "Las cantidades no pueden ser negativas.",
+      success: false,
+    });
     return;
   }
 
   try {
+    // 🔄 Actualizar en el backend
     await axios.patch(`http://localhost:4000/api/cultivos/${cultivoSeleccionado}`, {
       cantidad_cosechada: Number(form2.cantidad_cosechada),
       cantidad_disponible: Number(form2.cantidad_disponible),
@@ -147,34 +194,96 @@ export default function CultivosPage() {
       unidad_medida: form2.unidad_medida,
     });
 
-    // refrescar lista
-    const res = await axios.get("http://localhost:4000/api/cultivos");
-    setCultivos(res.data);
+    // 🔥 Refrescar desde backend para asegurar sincronización
+    await fetchCultivos();
+
+    // ✅ Cerrar modal y mostrar éxito
     setModalProduccion(false);
-    setModalMessage({ show: true, title: "Éxito", message: "Producción registrada correctamente.", success: true });
+    setModalMessage({
+      show: true,
+      title: "Éxito",
+      message: "Producción registrada correctamente.",
+      success: true,
+    });
   } catch (error) {
-    console.error(error);
-    setModalMessage({ show: true, title: "Error", message: "No se pudo guardar la producción.", success: false });
+    console.error("❌ Error al guardar producción:", error);
+    setModalMessage({
+      show: true,
+      title: "Error",
+      message: "No se pudo guardar la producción.",
+      success: false,
+    });
   }
 };
 
 
+useEffect(() => {
+  if (!busquedaResponsable.trim()) {
+    setResponsables([]); // ✅ oculta lista si no hay texto
+    return;
+  }
+
+  const controller = new AbortController();
+  const debounce = setTimeout(async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:4000/api/persona?filtro=${encodeURIComponent(busquedaResponsable)}`,
+        { signal: controller.signal }
+      );
+      setResponsables(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      if (!axios.isCancel(err)) {
+        console.error("Error buscando responsable", err);
+      }
+    }
+  }, 400);
+
+  return () => {
+    controller.abort();
+    clearTimeout(debounce);
+  };
+}, [busquedaResponsable]);
+
   // --- Efectos y Lógica de Datos ---
-  useEffect(() => {
-    const ListarCultivos = async () => {
-        setCargando(true);
-        try {
-            const res = await axios.get("http://localhost:4000/api/cultivos");
-            setCultivos(res.data);
-        } catch (error) {
-            console.error("Error al cargar cultivos", error);
-            setModalMessage({ show: true, title: "Error de Carga", message: "No se pudieron cargar los datos de cultivos.", success: false });
-        } finally {
-            setCargando(false);
-        }
-    };
-    ListarCultivos();
-  }, []);
+ // 📌 define la función afuera del useEffect
+const fetchCultivos = async () => {
+  try {
+    setCargando(true);
+
+    // 1️⃣ Traer cultivos
+    const cultivosRes = await axios.get("http://localhost:4000/api/cultivos");
+
+    // 2️⃣ Traer responsables
+    const responsablesRes = await axios.get("http://localhost:4000/api/persona");
+    const listaResponsables: Responsable[] = Array.isArray(responsablesRes.data) ? responsablesRes.data : [];
+
+    // 3️⃣ Mapear encargado
+    const cultivosConEncargado = cultivosRes.data.map((c: Cultivo) => ({
+      ...c,
+      encargado: listaResponsables.find(r => r.id_persona === c.responsable_id) || null
+    }));
+
+    setResponsablesIniciales(listaResponsables); 
+    setCultivos(cultivosConEncargado);
+
+  } catch (error) {
+    console.error("Error al cargar cultivos", error);
+    setModalMessage({ 
+      show: true, 
+      title: "Error de Carga", 
+      message: "No se pudieron cargar los datos de cultivos.", 
+      success: false 
+    });
+  } finally {
+    setCargando(false);
+  }
+};
+
+// 📌 useEffect inicial
+useEffect(() => {
+  fetchCultivos();
+}, []);
+
 
   useEffect(() => {
     const ClickOutside = (event: MouseEvent) => {
@@ -188,98 +297,182 @@ export default function CultivosPage() {
   }, []);
 
   // --- Funciones CRUD y de UI ---
-  const resetForm = () => {
-    setForm({ nombre_cultivo: "", descripcion: "", temp_min: "", temp_max: "", humedad_min: "", humedad_max: "", fecha_inicio: "", fecha_fin: "" });
-    setImagenFile(null);
-    setEditandoId(null);
-  };
+  // --- Funciones CRUD y UI ---
 
-  const abrirModal = (cultivo: Cultivo | null = null) => {
-    if (cultivo) {
-        setForm({
-            nombre_cultivo: cultivo.nombre_cultivo,
-            descripcion: cultivo.descripcion,
-            temp_min: String(cultivo.temp_min),
-            temp_max: String(cultivo.temp_max),
-            humedad_min: String(cultivo.humedad_min),
-            humedad_max: String(cultivo.humedad_max),
-            fecha_inicio: cultivo.fecha_inicio.slice(0, 10),
-            fecha_fin: cultivo.fecha_fin ? cultivo.fecha_fin.slice(0, 10) : "",
-        });
-        setEditandoId(cultivo.id_cultivo);
-    } else {
-        resetForm();
-    }
-    setModalOpen(true);
-  };
+const resetForm = () => {
+  setForm({
+    nombre_cultivo: "",
+    descripcion: "",
+    temp_min: "",
+    temp_max: "",
+    humedad_min: "",
+    humedad_max: "",
+    fecha_inicio: "",
+    fecha_fin: "",
+    responsable_id: 0
+  });
+  setImagenFile(null);
+  setEditandoId(null);
+};
 
-  const agregarCultivo = async () => {
-    if (!form.nombre_cultivo || !form.descripcion || !form.temp_min || !form.temp_max || !form.humedad_min || !form.humedad_max || !form.fecha_inicio) {
-        setModalMessage({ show: true, title: "Campos Incompletos", message: "Por favor, completa todos los campos obligatorios.", success: false });
-        return;
-    }
+// Abrir modal para crear o editar
+const abrirModal = (cultivo: Cultivo | null = null) => {
+  if (cultivo) {
+    setForm({
+      nombre_cultivo: cultivo.nombre_cultivo,
+      descripcion: cultivo.descripcion,
+      temp_min: String(cultivo.temp_min),
+      temp_max: String(cultivo.temp_max),
+      humedad_min: String(cultivo.humedad_min),
+      humedad_max: String(cultivo.humedad_max),
+      fecha_inicio: cultivo.fecha_inicio.slice(0, 10),
+      fecha_fin: cultivo.fecha_fin ? cultivo.fecha_fin.slice(0, 10) : "",
+      responsable_id: cultivo.responsable_id,
+    });
+    setResponsableSeleccionado(cultivo.encargado || null);
+    setBusquedaResponsable(cultivo.encargado?.nombre_usuario || "");
+    setEditandoId(cultivo.id_cultivo);
+    setResponsables([]); // ✅ limpia resultados al abrir modal
+  } else {
+    resetForm();
+    setResponsableSeleccionado(null);
+    setBusquedaResponsable("");
+  }
+  setModalOpen(true);
+};
+
+// Crear o actualizar cultivo
+const agregarCultivo = async () => {
+  const nuevosErrores: { [key: string]: string } = {};
+
+  if (!form.nombre_cultivo) nuevosErrores.nombre_cultivo = "El nombre es obligatorio";
+  if (!form.descripcion) nuevosErrores.descripcion = "La descripción es obligatoria";
+  if (!form.temp_min) nuevosErrores.temp_min = "La temperatura mínima es obligatoria";
+  if (!form.temp_max) nuevosErrores.temp_max = "La temperatura máxima es obligatoria";
+  if (!form.humedad_min) nuevosErrores.humedad_min = "La humedad mínima es obligatoria";
+  if (!form.humedad_max) nuevosErrores.humedad_max = "La humedad máxima es obligatoria";
+  if (!form.fecha_inicio) nuevosErrores.fecha_inicio = "La fecha de inicio es obligatoria";
+  if (!form.responsable_id) nuevosErrores.responsable_id = "Selecciona un responsable";
+
+  setErrores(nuevosErrores);
+  if (Object.keys(nuevosErrores).length > 0) return;
+
+  try {
     setGuardando(true);
     let urlImagen = "";
 
+    // 📷 Subir imagen si existe
     if (imagenFile) {
-        const formData = new FormData();
-        formData.append("imagen", imagenFile);
-        try {
-            const res = await axios.post("http://localhost:4000/api/imagen/imagen-cultivo", formData);
-            urlImagen = res.data.url;
-        } catch (error) {
-            setModalMessage({ show: true, title: "Error de Imagen", message: "No se pudo subir la imagen. Inténtalo de nuevo.", success: false });
-            setGuardando(false);
-            return;
-        }
+      const formData = new FormData();
+      formData.append("imagen", imagenFile);
+      const res = await axios.post("http://localhost:4000/api/imagen/imagen-cultivo", formData);
+      urlImagen = res.data.url;
     }
 
+    if (form.fecha_fin) {
+    const inicio = new Date(form.fecha_inicio);
+    const fin = new Date(form.fecha_fin);
+    if (fin < inicio) {
+      nuevosErrores.fecha_fin = "La fecha de finalización no puede ser menor que la fecha de inicio";
+    }
+  }
+
+  setErrores(nuevosErrores);
+  if (Object.keys(nuevosErrores).length > 0) return;
+    // 📦 Armar payload
     const payload: any = {
-        ...form,
-        temp_min: Number(form.temp_min), temp_max: Number(form.temp_max), humedad_min: Number(form.humedad_min), humedad_max: Number(form.humedad_max),
-        fecha_fin: form.fecha_fin || null, estado: "activo"
+      ...form,
+      temp_min: Number(form.temp_min),
+      temp_max: Number(form.temp_max),
+      humedad_min: Number(form.humedad_min),
+      humedad_max: Number(form.humedad_max),
+      fecha_fin: form.fecha_fin || null,
+      estado: "activo",
     };
     if (urlImagen) payload.imagenes = urlImagen;
 
-    try {
-        if (editandoId) {
-            await axios.put(`http://localhost:4000/api/cultivos/${editandoId}`, payload);
-        } else {
-            await axios.post("http://localhost:4000/api/cultivos", { ...payload, imagenes: urlImagen });
-        }
-        const res = await axios.get("http://localhost:4000/api/cultivos");
-        setCultivos(res.data);
-        setModalOpen(false);
-        resetForm();
-        setModalMessage({ show: true, title: "Éxito", message: `El cultivo "${payload.nombre_cultivo}" ha sido guardado correctamente.`, success: true });
-    } catch (error) {
-        console.error(error);
-        setModalMessage({ show: true, title: "Error al Guardar", message: "No se pudo guardar el cultivo. Revisa los datos e inténtalo de nuevo.", success: false });
-    } finally {
-        setGuardando(false);
-    }
-  };
+    let nuevoCultivo: Cultivo;
 
-  const eliminarCultivo = (id: number) => {
-    setModalConfirm({
-        show: true,
-        title: "Eliminar Cultivo",
-        message: "¿Estás seguro de que quieres eliminar este cultivo de forma permanente? Esta acción no se puede deshacer.",
-        confirmText: "Eliminar",
-        onConfirm: async () => {
-            try {
-                await axios.delete(`http://localhost:4000/api/cultivos/${id}`);
-                setCultivos(prev => prev.filter(c => c.id_cultivo !== id));
-                setModalMessage({ show: true, title: "Eliminado", message: "El cultivo ha sido eliminado.", success: true });
-            } catch {
-                setModalMessage({ show: true, title: "Error", message: "No se pudo eliminar el cultivo.", success: false });
-            } finally {
-                setModalConfirm({ ...modalConfirm, show: false });
-                setMenuOpenId(null);
-            }
-        }
+    if (editandoId) {
+      // 📝 Editar
+      await axios.put(`http://localhost:4000/api/cultivos/${editandoId}`, payload);
+      const cultAnt = cultivos.find(c => c.id_cultivo === editandoId);
+      nuevoCultivo = {
+        ...cultAnt,
+        ...payload,
+        encargado: responsableSeleccionado || cultAnt?.encargado || null,
+      };
+      setCultivos(prev =>
+        prev.map(c => (c.id_cultivo === editandoId ? nuevoCultivo : c))
+      );
+    } else {
+      // ➕ Crear
+      const resPost = await axios.post("http://localhost:4000/api/cultivos", payload);
+
+      nuevoCultivo = {
+        ...resPost.data,
+        encargado: responsableSeleccionado || null,
+        estado: "activo",
+        cantidad_cosechada: null,
+        cantidad_disponible: null,
+        cantidad_reservada: null,
+        unidad_medida: "kilogramos", // puedes cambiarlo según lo que uses en tu backend
+      };
+
+      setCultivos(prev => [...prev, nuevoCultivo]);
+    }
+
+    // 🔥 Recargar cultivos desde backend para asegurar que todo esté actualizado
+    await fetchCultivos();
+
+    // ✅ Cerrar modal, limpiar form y mostrar mensaje
+    setModalOpen(false);
+    resetForm();
+    setModalMessage({
+      show: true,
+      title: "Éxito",
+      message: `El cultivo "${payload.nombre_cultivo}" ha sido guardado correctamente.`,
+      success: true,
     });
-  };
+
+  } catch (error: any) {
+    console.error("❌ Error en guardar cultivo:", error);
+    if (axios.isAxiosError(error) && error.response?.status === 400) {
+      setErrores(error.response.data.errores || {});
+    } else {
+      setModalMessage({
+        show: true,
+        title: "Error al Guardar",
+        message: "No se pudo guardar el cultivo. Revisa los datos e inténtalo de nuevo.",
+        success: false,
+      });
+    }
+  } finally {
+    setGuardando(false);
+  }
+};
+
+// --- Eliminar cultivo ---
+const eliminarCultivo = (id: number) => {
+  setModalConfirm({
+    show: true,
+    title: "Eliminar Cultivo",
+    message: "¿Estás seguro de que quieres eliminar este cultivo de forma permanente? Esta acción no se puede deshacer.",
+    confirmText: "Eliminar",
+    onConfirm: async () => {
+      try {
+        await axios.delete(`http://localhost:4000/api/cultivos/${id}`);
+        setCultivos(prev => prev.filter(c => c.id_cultivo !== id));
+        setModalMessage({ show: true, title: "Eliminado", message: "El cultivo ha sido eliminado.", success: true });
+      } catch {
+        setModalMessage({ show: true, title: "Error", message: "No se pudo eliminar el cultivo.", success: false });
+      } finally {
+        setModalConfirm({ ...modalConfirm, show: false });
+        setMenuOpenId(null);
+      }
+    }
+  });
+};
 
   const cambiarEstado = (id: number, nuevo: string) => {
     const onConfirm = async () => {
@@ -303,7 +496,9 @@ export default function CultivosPage() {
     });
   };
 
-  const cultivosFiltrados = cultivos.filter(c => c.nombre_cultivo.toLowerCase().includes(busqueda.toLowerCase()));
+const cultivosFiltrados = cultivos.filter(c =>
+  c.nombre_cultivo?.toLowerCase().includes(busqueda.toLowerCase())
+);
 const unitSuffix = (u?: Cultivo["unidad_medida"]) => {
   if (u === "unidades") return "unid.";
   // default/fallback
@@ -359,7 +554,17 @@ const unitSuffix = (u?: Cultivo["unidad_medida"]) => {
                 <div className="text-sm space-y-2 border-t border-slate-200 pt-4">
                   <div className="flex items-center gap-2 text-slate-600"><Thermometer className="w-4 h-4 text-red-500"/><span>{c.temp_min}°C - {c.temp_max}°C</span></div>
                   <div className="flex items-center gap-2 text-slate-600"><Droplets className="w-4 h-4 text-sky-500"/><span>{c.humedad_min}% - {c.humedad_max}%</span></div>
-                  <div className="flex items-center gap-2 text-slate-600"><CalendarDays className="w-4 h-4 text-slate-500"/><span>{new Date(c.fecha_inicio).toLocaleDateString()} - {c.fecha_fin ? new Date(c.fecha_fin).toLocaleDateString() : "Presente"}</span></div>
+                  <div className="flex items-center gap-2 text-slate-600"><CalendarDays className="w-4 h-4 text-slate-500"/><span>
+  {new Date(c.fecha_inicio).toLocaleDateString("es-CO", { timeZone: "UTC" })} - 
+  {c.fecha_fin ? new Date(c.fecha_fin).toLocaleDateString("es-CO", { timeZone: "UTC" }) : "Presente"}
+</span>
+</div>
+                    {c.encargado ? (
+  <p className="text-sm text-slate-600 mt-1">Responsable: {c.encargado.nombre_usuario}</p>
+) : (
+  <p className="text-sm text-slate-400 mt-1">Responsable: —</p>
+)}
+
                 </div>
 
                 {/* BLOQUE DE PRODUCCIÓN (OPCIÓN 1: mostrar siempre) */}
@@ -399,21 +604,177 @@ const unitSuffix = (u?: Cultivo["unidad_medida"]) => {
                 <h2 className="text-2xl font-bold text-slate-800">{editandoId ? "Editar" : "Nuevo"} Cultivo</h2>
                 <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 p-2 text-slate-500 hover:bg-slate-100 rounded-full"><X/></button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto">
-              <input placeholder="Nombre del cultivo (Ej: Rosa Roja)" value={form.nombre_cultivo} onChange={(e) => setForm({ ...form, nombre_cultivo: e.target.value })} className="w-full border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <textarea placeholder="Descripción detallada del cultivo..." value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} className="w-full border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" rows={4}/>
-              <div className="grid grid-cols-2 gap-4">
-                <input type="number" placeholder="Temp. Mínima (°C)" value={form.temp_min} onChange={(e) => setForm({ ...form, temp_min: e.target.value })} className="border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
-                <input type="number" placeholder="Temp. Máxima (°C)" value={form.temp_max} onChange={(e) => setForm({ ...form, temp_max: e.target.value })} className="border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <input type="number" placeholder="Humedad Mínima (%)" value={form.humedad_min} onChange={(e) => setForm({ ...form, humedad_min: e.target.value })} className="border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
-                <input type="number" placeholder="Humedad Máxima (%)" value={form.humedad_max} onChange={(e) => setForm({ ...form, humedad_max: e.target.value })} className="border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                 <input type="date" title="Fecha de Inicio" value={form.fecha_inicio} onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })} className="w-full text-slate-500 border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
-                 <input type="date" title="Fecha de Fin (opcional)" value={form.fecha_fin} onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })} className="w-full text-slate-500 border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              </div>
+              <div className="p-6 space-y-4 overflow-y-auto">
+  {/* Nombre del cultivo */}
+  <input
+    placeholder="Nombre del cultivo (Ej: Rosa Roja)"
+    value={form.nombre_cultivo}
+    onChange={(e) => setForm({ ...form, nombre_cultivo: e.target.value })}
+    className={`w-full border p-3 rounded-lg ${
+      errores.nombre_cultivo ? "border-red-500" : "border-slate-300"
+    }`}
+  />
+  {errores.nombre_cultivo && (
+    <p className="text-red-500 text-sm mt-1">{errores.nombre_cultivo}</p>
+  )}
+
+  {/* Descripción */}
+  <textarea
+    placeholder="Descripción detallada del cultivo..."
+    value={form.descripcion}
+    onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+    className={`w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+      errores.descripcion ? "border-red-500" : "border-slate-300"
+    }`}
+    rows={4}
+  />
+  {errores.descripcion && (
+    <p className="text-red-500 text-sm mt-1">{errores.descripcion}</p>
+  )}
+
+  {/* Temperaturas */}
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <input
+        type="number"
+        placeholder="Temp. Mínima (°C)"
+        value={form.temp_min}
+        onChange={(e) => setForm({ ...form, temp_min: e.target.value })}
+        className={`w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+          errores.temp_min ? "border-red-500" : "border-slate-300"
+        }`}
+      />
+      {errores.temp_min && (
+        <p className="text-red-500 text-sm mt-1">{errores.temp_min}</p>
+      )}
+    </div>
+    <div>
+      <input
+        type="number"
+        placeholder="Temp. Máxima (°C)"
+        value={form.temp_max}
+        onChange={(e) => setForm({ ...form, temp_max: e.target.value })}
+        className={`w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+          errores.temp_max ? "border-red-500" : "border-slate-300"
+        }`}
+      />
+      {errores.temp_max && (
+        <p className="text-red-500 text-sm mt-1">{errores.temp_max}</p>
+      )}
+    </div>
+  </div>
+
+  {/* Humedad */}
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <input
+        type="number"
+        placeholder="Humedad Mínima (%)"
+        value={form.humedad_min}
+        onChange={(e) => setForm({ ...form, humedad_min: e.target.value })}
+        className={`w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+          errores.humedad_min ? "border-red-500" : "border-slate-300"
+        }`}
+      />
+      {errores.humedad_min && (
+        <p className="text-red-500 text-sm mt-1">{errores.humedad_min}</p>
+      )}
+    </div>
+    <div>
+      <input
+        type="number"
+        placeholder="Humedad Máxima (%)"
+        value={form.humedad_max}
+        onChange={(e) => setForm({ ...form, humedad_max: e.target.value })}
+        className={`w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+          errores.humedad_max ? "border-red-500" : "border-slate-300"
+        }`}
+      />
+      {errores.humedad_max && (
+        <p className="text-red-500 text-sm mt-1">{errores.humedad_max}</p>
+      )}
+    </div>
+  </div>
+{/* Fechas */}
+<div className="grid grid-cols-2 gap-4">
+  {/* Fecha de inicio */}
+  <div>
+    <input
+      type="date"
+      title="Fecha de Inicio"
+      value={form.fecha_inicio}
+      onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
+      className={`w-full text-slate-500 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+        errores.fecha_inicio ? "border-red-500" : "border-slate-300"
+      }`}
+    />
+    {errores.fecha_inicio && (
+      <p className="text-red-500 text-sm mt-1">{errores.fecha_inicio}</p>
+    )}
+  </div>
+
+  {/* Fecha de fin */}
+  <div>
+    <input
+      type="date"
+      title="Fecha de Fin"
+      value={form.fecha_fin}
+      onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
+      className={`w-full text-slate-500 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+        errores.fecha_fin ? "border-red-500" : "border-slate-300"
+      }`}
+    />
+    {errores.fecha_fin && (
+      <p className="text-red-500 text-sm mt-1">{errores.fecha_fin}</p>
+    )}
+  </div>
+</div>
+    
+<div>
+  <label className="block text-sm font-semibold text-slate-700 mb-2">
+    Responsable del Cultivo
+  </label>
+  <input
+    type="text"
+    placeholder="Buscar responsable..."
+    value={busquedaResponsable}
+    onChange={(e) => setBusquedaResponsable(e.target.value)}
+    className="w-full border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+  />
+
+  {/* Lista de resultados */}
+  {responsables.length > 0 && (
+    <ul className="border border-slate-200 mt-2 rounded-lg max-h-40 overflow-y-auto">
+      {responsables.map((r) => (
+        <li
+          key={r.id_persona}
+          onClick={() => {
+            setResponsableSeleccionado(r);
+            setForm({ ...form, responsable_id: r.id_persona });
+            setBusquedaResponsable(r.nombre_usuario);
+            setResponsables([]); // cerrar la lista
+          }}
+          className="px-3 py-2 cursor-pointer hover:bg-slate-100 text-slate-700"
+        >
+          {r.nombre_usuario} ({r.rol})
+        </li>
+      ))}
+    </ul>
+     )}
+    {busquedaResponsable.trim() && responsables.length === 0 && (
+  <p className="text-sm text-slate-400 mt-2">No se encontraron responsables.</p>
+  )}
+
+ 
+
+        {/* Mostrar responsable seleccionado */}
+        {responsableSeleccionado && (
+          <p className="mt-2 text-sm text-teal-600">
+            Responsable seleccionado: <b>{responsableSeleccionado.nombre_usuario}</b>
+          </p>
+        )}
+      </div>
+
 
               {/* Si estamos editando, muestro producción actual (no usa 'c' fuera del map) */}
               {cultivoEditando && (
@@ -451,10 +812,10 @@ const unitSuffix = (u?: Cultivo["unidad_medida"]) => {
       {modalMessage.show && <MessageModal title={modalMessage.title} message={modalMessage.message} success={modalMessage.success} onCerrar={() => setModalMessage({ ...modalMessage, show: false })} />}
 
         {/* Modal Producción */}
-{modalProduccion && (
-  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-      <h2 className="text-xl font mb-4">Registrar Producción</h2>
+      {modalProduccion && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h2 className="text-xl font mb-4">Registrar Producción</h2>
 
       {/* Tipo de unidad */}
       <select
@@ -505,9 +866,6 @@ const unitSuffix = (u?: Cultivo["unidad_medida"]) => {
     </div>
   </div>
 )}
-
-
-
     </main>
   );
 }
