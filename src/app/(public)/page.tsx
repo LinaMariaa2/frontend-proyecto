@@ -21,21 +21,21 @@ interface TechStackItemProps {
 
 // --- Componentes Reutilizables ---
 const Header = (): JSX.Element => (
-  <header className="bg-slate-50/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
+  <header className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800">
     <nav className="container mx-auto px-6 py-3 flex justify-between items-center">
       <Link
         href="/"
-        className="flex items-center gap-2 text-xl font-bold text-slate-900"
+        className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white"
       >
-        <Leaf className="w-7 h-7 text-teal-600" />
+        <Leaf className="w-7 h-7 text-teal-600 dark:text-teal-500" />
         <span>Hortitech</span>
       </Link>
-      <div className="flex items-center gap-6 text-slate-700 font-medium">
-        <a href="#features" className="hover:text-teal-600">Características</a>
-        <a href="#benefits" className="hover:text-teal-600">Beneficios</a>
-        <a href="#tech" className="hover:text-teal-600">Tecnología</a>
-        <a href="#about" className="hover:text-teal-600">About</a>
-        <a href="#contact" className="hover:text-teal-600">Contacto</a>
+      <div className="flex items-center gap-6 text-slate-700 dark:text-slate-300 font-medium">
+        <a href="#features" className="hover:text-teal-600 dark:hover:text-teal-400">Características</a>
+        <a href="#benefits" className="hover:text-teal-600 dark:hover:text-teal-400">Beneficios</a>
+        <a href="#tech" className="hover:text-teal-600 dark:hover:text-teal-400">Tecnología</a>
+        <a href="#about" className="hover:text-teal-600 dark:hover:text-teal-400">About</a>
+        <a href="#contact" className="hover:text-teal-600 dark:hover:text-teal-400">Contacto</a>
         <Link
           href="/login"
           className="bg-teal-600 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors"
@@ -53,15 +53,15 @@ const FeatureCard = ({ image, title, description }: FeatureCardProps) => (
     whileHover={{ y: -5, scale: 1.03 }}
     transition={{ type: "spring", stiffness: 300 }}
   >
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 h-full text-center shadow-md hover:shadow-xl transition-shadow duration-300">
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 h-full text-center shadow-md hover:shadow-xl dark:shadow-teal-900/20 dark:hover:shadow-teal-800/30 transition-shadow duration-300">
       {/* Imagen */}
       <img
         src={image}
         alt={title}
         className="w-60 h-60 mx-auto mb-6 rounded-xl object-cover shadow-md"
       />
-      <h3 className="text-xl font-bold text-slate-800">{title}</h3>
-      <p className="text-slate-500 mt-2">{description}</p>
+      <h3 className="text-xl font-bold text-slate-800 dark:text-white">{title}</h3>
+      <p className="text-slate-500 dark:text-slate-400 mt-2">{description}</p>
     </div>
   </motion.div>
 );
@@ -72,74 +72,105 @@ const BenefitItem = ({ children }: { children: React.ReactNode }) => (
     className="flex items-start gap-3"
   >
     <CheckCircle className="flex-shrink-0 w-6 h-6 text-teal-500 mt-1" />
-    <span className="text-slate-600 text-lg">{children}</span>
+    <span className="text-slate-600 dark:text-slate-300 text-lg">{children}</span>
   </motion.li>
 );
 
 const Footer = (): JSX.Element => (
-  <footer className="bg-slate-900 text-slate-300 border-t border-slate-700">
-    <div className="container mx-auto px-6 py-12">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+  <footer className="bg-gradient-to-b from-slate-900 via-slate-950 to-black text-slate-300">
+    <div className="container mx-auto px-6 py-16">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
         
         {/* Columna 1: Logo y Descripción */}
-        <div className="md:col-span-1">
-          <Link href="/" className="flex items-center gap-2 text-xl font-bold text-white">
-            <Leaf className="w-7 h-7 text-teal-500" />
+        <div>
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-2xl font-bold text-white"
+          >
+            <Leaf className="w-8 h-8 text-teal-500" />
             <span>Hortitech</span>
           </Link>
-          <p className="mt-4 text-slate-400 text-sm">
-            Automatización para la agricultura del futuro.
+          <p className="mt-4 text-slate-400 text-sm leading-relaxed">
+            Automatización para la agricultura del futuro.  
+            Tecnología que potencia la productividad y cuida el planeta 🌱
           </p>
         </div>
 
         {/* Columna 2: Navegación */}
         <div>
-          <h3 className="font-semibold text-white tracking-wider uppercase">Navegación</h3>
-          <ul className="mt-4 space-y-2">
-            <li><a href="#features" className="hover:text-teal-400 transition-colors">Características</a></li>
-            <li><a href="#benefits" className="hover:text-teal-400 transition-colors">Beneficios</a></li>
-            <li><a href="#tech" className="hover:text-teal-400 transition-colors">Tecnología</a></li>
-            <li><a href="/login" className="hover:text-teal-400 transition-colors">Iniciar Sesión</a></li>
+          <h3 className="font-semibold text-white tracking-wider uppercase mb-4">
+            Navegación
+          </h3>
+          <ul className="space-y-3">
+            <li><a href="#features" className="hover:text-teal-400 transition">Características</a></li>
+            <li><a href="#benefits" className="hover:text-teal-400 transition">Beneficios</a></li>
+            <li><a href="#tech" className="hover:text-teal-400 transition">Tecnología</a></li>
+            <li><a href="#about" className="hover:text-teal-400 transition">Sobre Nosotros</a></li>
+            <li><a href="#contact" className="hover:text-teal-400 transition">Contacto</a></li>
           </ul>
         </div>
-        
+
         {/* Columna 3: Contacto */}
         <div>
-          <h3 className="font-semibold text-white tracking-wider uppercase">Contacto</h3>
-          <ul className="mt-4 space-y-2">
-            <li className="flex items-center gap-2">
-              <Mail className="w-5 h-5" />
-              <a href="mailto:contacto@hortitech.com" className="hover:text-teal-400">contacto@hortitech.com</a>
+          <h3 className="font-semibold text-white tracking-wider uppercase mb-4">
+            Contacto
+          </h3>
+          <ul className="space-y-3 text-slate-400">
+            <li className="flex items-center gap-3">
+              <Mail className="w-5 h-5 text-teal-400" />
+              <a href="mailto:contacto@hortitech.com" className="hover:text-teal-300">
+                contacto@hortitech.com
+              </a>
             </li>
-            <li className="flex items-center gap-2">
-              <Phone className="w-5 h-5" />
+            <li className="flex items-center gap-3">
+              <Phone className="w-5 h-5 text-teal-400" />
               <span>+57 300 123 4567</span>
             </li>
-            <li className="flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              <span>Bogotá, Colombia</span>
+            <li className="flex items-center gap-3">
+              <MapPin className="w-5 h-5 text-teal-400" />
+              <span>Popayán, Colombia</span>
             </li>
           </ul>
         </div>
 
         {/* Columna 4: Redes Sociales */}
         <div>
-           <h3 className="font-semibold text-white tracking-wider uppercase">Síguenos</h3>
-           <div className="flex justify-start gap-5 mt-4">
-             <a href="#" aria-label="Facebook" className="text-slate-400 hover:text-teal-400 transition-colors"><Facebook /></a>
-             <a href="#" aria-label="Instagram" className="text-slate-400 hover:text-teal-400 transition-colors"><Instagram /></a>
-             <a href="#" aria-label="Linkedin" className="text-slate-400 hover:text-teal-400 transition-colors"><Linkedin /></a>
-           </div>
+          <h3 className="font-semibold text-white tracking-wider uppercase mb-4">
+            Síguenos
+          </h3>
+          <div className="flex gap-6 mt-4">
+            <a
+              href="#"
+              aria-label="Facebook"
+              className="text-slate-400 hover:text-blue-500 transition text-2xl"
+            >
+              <Facebook />
+            </a>
+            <a
+              href="#"
+              aria-label="Instagram"
+              className="text-slate-400 hover:text-pink-500 transition text-2xl"
+            >
+              <Instagram />
+            </a>
+            <a
+              href="#"
+              aria-label="Linkedin"
+              className="text-slate-400 hover:text-sky-500 transition text-2xl"
+            >
+              <Linkedin />
+            </a>
+          </div>
         </div>
-
       </div>
 
-      {/* Barra inferior del footer */}
-      <div className="mt-12 pt-8 border-t border-slate-700 text-center text-sm text-slate-400">
-        <p>&copy; {new Date().getFullYear()} Hortitech. Todos los derechos reservados.</p>
+      {/* Barra inferior */}
+      <div className="mt-12 pt-8 border-t border-slate-700 text-center text-sm text-slate-500">
+        <p>© {new Date().getFullYear()} Hortitech. Todos los derechos reservados.</p>
       </div>
     </div>
   </footer>
+
 );
 
 // --- Página Principal ---
@@ -164,7 +195,7 @@ export default function HomePage(): JSX.Element {
 
       if (res.ok) {
         setStatus("✅ Mensaje enviado correctamente");
-        setForm({ name: "", email: "", message: "" });
+        setForm({ name: "", email: "", phone: "", company: "", message: "" });
       } else {
         setStatus("❌ Error al enviar el mensaje");
       }
@@ -174,28 +205,27 @@ export default function HomePage(): JSX.Element {
   };
 
   const mainFeatures: FeatureCardProps[] = [
-  {
-    image: "/img/feature-lighting.png",
-    title: "Iluminación Automatizada",
-    description: "Programa horarios de luz precisos para potenciar el crecimiento."
-  },
-  {
-    image: "/img/feature-irrigation.png",
-    title: "Riego Inteligente",
-    description: "Asegura hidratación y ahorra agua con sensores inteligentes."
-  },
-  {
-    image: "/img/feature-team.png",
-    title: "Gestión de Roles",
-    description: "Permisos para administradores y operarios."
-  },
-  {
-    image: "/img/feature-alerts.png",
-    title: "Alertas y Notificaciones",
-    description: "Avisos de fallos o falta de agua."
-  }
-];
-
+    {
+      image: "/img/feature-lighting.png",
+      title: "Iluminación Automatizada",
+      description: "Programa horarios de luz precisos para potenciar el crecimiento."
+    },
+    {
+      image: "/img/feature-irrigation.png",
+      title: "Riego Inteligente",
+      description: "Asegura hidratación y ahorra agua con sensores inteligentes."
+    },
+    {
+      image: "/img/feature-team.png",
+      title: "Gestión de Roles",
+      description: "Permisos para administradores y operarios."
+    },
+    {
+      image: "/img/feature-alerts.png",
+      title: "Alertas y Notificaciones",
+      description: "Avisos de fallos o falta de agua."
+    }
+  ];
 
   const techStack: TechStackItemProps[] = [
     { image: "/img/tech/react.png", name: "React & Next.js" },
@@ -205,7 +235,7 @@ export default function HomePage(): JSX.Element {
   ];
 
   return (
-    <div className="bg-slate-50 font-sans">
+    <div className="bg-slate-50 dark:bg-slate-900 font-sans">
       <Header />
 
       <main>
@@ -214,7 +244,6 @@ export default function HomePage(): JSX.Element {
           className="relative text-center py-32 px-6 overflow-hidden bg-cover bg-center"
           style={{ backgroundImage: "url('/img/hero-greenhouse.jpg')" }}
         >
-          {/* Overlay degradado */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60" />
 
           <motion.div
@@ -255,66 +284,42 @@ export default function HomePage(): JSX.Element {
           </motion.div>
         </section>
 
-
         {/* Features */}
-        <section id="features" className="py-24 bg-white border-y border-slate-200">
+        <section id="features" className="py-24 bg-white dark:bg-slate-900 border-y border-slate-200 dark:border-slate-800">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Una Plataforma Diseñada para Crecer</h2>
-              <p className="mt-4 text-lg text-slate-600">Desde el control remoto hasta la analítica avanzada.</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">Una Plataforma Diseñada para Crecer</h2>
+              <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">Desde el control remoto hasta la analítica avanzada.</p>
             </div>
-            <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-12 gap-8 mt-16">
+            <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-16">
               {mainFeatures.map((feature) => (<FeatureCard key={feature.title} {...feature} />))}
             </motion.div>
           </div>
         </section>
 
         {/* Beneficios */}
-        <section id="benefits" className="py-24 bg-slate-50">
+        <section id="benefits" className="py-24 bg-slate-50 dark:bg-gray-800">
           <motion.div className="container mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               
-              {/* Columna Izquierda: Imagen */}
               <div className="relative">
                 <img
                   src="/img/benefits-crops.png"
                   alt="Cultivos en invernadero"
                   className="rounded-2xl shadow-lg object-cover w-full h-[400px]"
                 />
-                {/* Overlay sutil */}
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/20 to-transparent" />
               </div>
 
-              {/* Columna Derecha: Texto + Lista */}
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
                   Beneficios que se Cosechan
                 </h2>
                 <ul className="space-y-5 mt-8">
-                  <li className="flex items-start gap-3">
-                    <CheckCircle className="flex-shrink-0 w-6 h-6 text-teal-500 mt-1" />
-                    <span className="text-lg text-slate-700">
-                      Aumento en la productividad agrícola.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle className="flex-shrink-0 w-6 h-6 text-teal-500 mt-1" />
-                    <span className="text-lg text-slate-700">
-                      Reducción del consumo de agua y energía.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle className="flex-shrink-0 w-6 h-6 text-teal-500 mt-1" />
-                    <span className="text-lg text-slate-700">
-                      Mayor precisión en el cuidado del cultivo.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle className="flex-shrink-0 w-6 h-6 text-teal-500 mt-1" />
-                    <span className="text-lg text-slate-700">
-                      Acceso remoto desde cualquier dispositivo.
-                    </span>
-                  </li>
+                  <BenefitItem>Aumento en la productividad agrícola.</BenefitItem>
+                  <BenefitItem>Reducción del consumo de agua y energía.</BenefitItem>
+                  <BenefitItem>Mayor precisión en el cuidado del cultivo.</BenefitItem>
+                  <BenefitItem>Acceso remoto desde cualquier dispositivo.</BenefitItem>
                 </ul>
               </div>
 
@@ -322,16 +327,15 @@ export default function HomePage(): JSX.Element {
           </motion.div>
         </section>
 
-
         {/* Stack */}
-        <section id="tech" className="py-24">
+        <section id="tech" className="py-24 bg-white dark:bg-slate-900">
           <div className="container mx-auto px-6 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Construido con Tecnología Confiable</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">Construido con Tecnología Confiable</h2>
             <motion.div className="flex flex-wrap justify-center gap-x-16 gap-y-12 mt-16">
               {techStack.map((tech) => (
                 <motion.div
                   key={tech.name}
-                  className="flex flex-col items-center gap-3 text-slate-600 bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-transform hover:scale-105 w-48"
+                  className="flex flex-col items-center gap-3 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 p-6 rounded-xl shadow-md hover:shadow-lg transition-transform hover:scale-105 w-48"
                 >
                   <img
                     src={tech.image}
@@ -342,16 +346,14 @@ export default function HomePage(): JSX.Element {
                 </motion.div>
               ))}
             </motion.div>
-
           </div>
         </section>
 
         {/* About */}
-        <section id="about" className="py-24 bg-white border-y border-slate-200">
+        <section id="about" className="py-24 bg-slate-50 dark:bg-gray-800 border-y border-slate-200 dark:border-slate-700">
           <div className="container mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               
-              {/* Columna Izquierda: Imagen */}
               <div className="relative">
                 <img
                   src="/img/about-team.png"
@@ -361,18 +363,17 @@ export default function HomePage(): JSX.Element {
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/10 to-transparent" />
               </div>
 
-              {/* Columna Derecha: Texto */}
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
                   Sobre Nosotros
                 </h2>
-                <p className="mt-6 text-lg text-slate-600 leading-relaxed">
-                  En <span className="font-semibold text-teal-600">HortiTech</span> 
+                <p className="mt-6 text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+                  En <span className="font-semibold text-teal-600 dark:text-teal-500">HortiTech</span> 
                   trabajamos para transformar la agricultura mediante soluciones 
                   tecnológicas innovadoras que permiten el control eficiente y sostenible 
                   de los invernaderos.
                 </p>
-                <p className="mt-4 text-lg text-slate-600 leading-relaxed">
+                <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
                   Nuestro equipo multidisciplinario combina experiencia en ingeniería, 
                   desarrollo de software e innovación agrícola para brindar herramientas 
                   confiables que potencian la productividad y promueven la sostenibilidad.
@@ -383,47 +384,44 @@ export default function HomePage(): JSX.Element {
           </div>
         </section>
 
-
         {/* Contact */}
-        <section id="contact" className="py-24 bg-slate-50">
+        <section id="contact" className="py-24 bg-white dark:bg-slate-900">
           <motion.div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
                 Contáctanos
               </h2>
-              <p className="mt-4 text-lg text-slate-600">
+              <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
                 ¿Listo para revolucionar tu invernadero? Estamos aquí para ayudarte 🚀
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-12 items-start">
               
-              {/* Columna Izquierda: Info + Mapa */}
               <div className="space-y-8">
                 <div>
-                  <h3 className="text-xl font-semibold text-slate-800 mb-3">
+                  <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-3">
                     Información de contacto
                   </h3>
-                  <ul className="space-y-4 text-slate-600">
+                  <ul className="space-y-4 text-slate-600 dark:text-slate-300">
                     <li className="flex items-center gap-3">
-                      <Mail className="w-6 h-6 text-teal-600" />
+                      <Mail className="w-6 h-6 text-teal-600 dark:text-teal-500" />
                       <span>contacto@hortitech.com</span>
                     </li>
                     <li className="flex items-center gap-3">
-                      <Phone className="w-6 h-6 text-teal-600" />
+                      <Phone className="w-6 h-6 text-teal-600 dark:text-teal-500" />
                       <span>+57 300 123 4567</span>
                     </li>
                     <li className="flex items-center gap-3">
-                      <MapPin className="w-6 h-6 text-teal-600" />
-                      <span>Bogotá, Colombia</span>
+                      <MapPin className="w-6 h-6 text-teal-600 dark:text-teal-500" />
+                      <span>Popayán, Colombia</span>
                     </li>
                   </ul>
                 </div>
 
-                {/* Google Maps Embed */}
                 <div className="overflow-hidden rounded-xl shadow-lg h-[250px]">
                   <iframe
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.984467770008!2d-74.08175!3d4.60971!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f99a6a6a6a6a%3A0x1234567890abcdef!2sBogotá%2C%20Colombia!5e0!3m2!1ses!2sco!4v1690000000000!5m2!1ses!2sco"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15944.328222115579!2d-76.5603823!3d2.47978365!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e300410eb607c65%3A0x614545787e90bea6!2sSENA!5e0!3m2!1ses-419!2sco!4v1758063107090!5m2!1ses-419!2sco"
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}
@@ -433,87 +431,81 @@ export default function HomePage(): JSX.Element {
                 </div>
               </div>
 
-              {/* Columna Derecha: Formulario */}
               <motion.div>
                 <form
                   onSubmit={handleSubmit}
-                  className="space-y-6 bg-white p-8 rounded-2xl shadow-lg border border-slate-200"
+                  className="space-y-6 bg-slate-50 dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700"
                 >
-                  {/* Nombre */}
+                  
                   <div>
-                    <label className="block mb-2 font-medium">Nombre completo</label>
+                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Nombre completo</label>
                     <input
                       type="text"
                       name="name"
                       value={form.name}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
 
-                  {/* Correo */}
                   <div>
-                    <label className="block mb-2 font-medium">Correo</label>
+                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Correo</label>
                     <input
                       type="email"
                       name="email"
                       value={form.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
-
-                  {/* Celular */}
+                  
                   <div>
-                    <label className="block mb-2 font-medium">Celular</label>
+                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Celular</label>
                     <input
                       type="tel"
                       name="phone"
                       value={form.phone || ""}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
-
-                  {/* Empresa */}
+                  
                   <div>
-                    <label className="block mb-2 font-medium">Empresa</label>
+                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Empresa</label>
                     <input
                       type="text"
                       name="company"
                       value={form.company || ""}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
 
-                  {/* Mensaje (opcional) */}
                   <div>
-                    <label className="block mb-2 font-medium">Mensaje (opcional)</label>
+                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Mensaje (opcional)</label>
                     <textarea
                       name="message"
                       value={form.message}
                       onChange={handleChange}
                       rows={5}
-                      className="w-full px-4 py-3 border rounded-lg resize-none focus:ring-2 focus:ring-teal-500"
+                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg resize-none focus:ring-2 focus:ring-teal-500"
                       placeholder="Escribe tu mensaje..."
                     />
                   </div>
 
-                  {/* Botón */}
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-teal-500 to-green-500 text-white py-3 px-6 rounded-lg hover:from-teal-600 hover:to-green-600 shadow-md transition"
+                    className="w-full bg-gradient-to-r from-teal-500 to-green-500 text-white font-semibold py-3 px-6 rounded-lg hover:from-teal-600 hover:to-green-600 shadow-md transition"
                   >
                     Enviar mensaje
                   </button>
 
                   {status && (
-                    <p className="text-center mt-2 text-sm text-slate-600">{status}</p>
+                    <p className="text-center mt-2 text-sm text-slate-600 dark:text-slate-400">{status}</p>
                   )}
                 </form>
               </motion.div>
