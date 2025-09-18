@@ -1,6 +1,9 @@
 # Etapa 1: Builder
-FROM node:18 AS builder
+FROM node:18-alpine AS builder
 WORKDIR /app
+
+# Instala dependencias necesarias para compilar
+RUN apk add --no-cache python3 make g++
 
 # Copia package.json y package-lock.json para instalar dependencias
 COPY package*.json ./
@@ -27,5 +30,4 @@ COPY --from=builder /app/next.config.js ./
 EXPOSE 3000
 
 # Comando de inicio usando variable PORT de Railway
-ENV PORT 3000
 CMD ["sh", "-c", "next start -p $PORT"]
