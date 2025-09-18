@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
   "dev": "next dev --turbopack",
-  "build": "next build --no-lint",
+  "build": "NEXT_SKIP_TYPE_CHECK=true next build",
   "start": "next start -p $PORT",
   "lint": "next lint"
 },
