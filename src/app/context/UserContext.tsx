@@ -26,7 +26,7 @@ interface UserContextType {
     login: (token: string, userData: User) => void;
     logout: () => void;
     isLoading: boolean;
-    refreshUser: () => Promise<void>; // To refresh user data (including photo)
+    refreshUser: () => Promise<void>; 
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
