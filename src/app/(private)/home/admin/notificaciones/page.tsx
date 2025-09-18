@@ -1,16 +1,20 @@
 "use client";
 
 import React, { JSX, useState, useEffect } from "react";
-import { Bell, Check, AlertTriangle, Droplets, Sun, Sprout, Info } from "lucide-react";
+import { Bell, Check, AlertTriangle, XCircle } from "lucide-react";
 
 // --- Interfaces y Tipos ---
-interface Notificacion {
-  id: number;
-  tipo: "alerta" | "riego" | "iluminacion" | "cultivo" | "sistema";
-  titulo: string;
-  mensaje: string;
-  timestamp: string; // Formato ISO 8601: "YYYY-MM-DDTHH:mm:ssZ"
+interface Visita {
+  id_visita: number;
+  nombre_visitante: string;
+  motivo: string;
+  createdAt: string;
   leida: boolean;
+  ciudad: string;
+  fecha_visita: string;
+  correo: string;
+  identificacion: string;
+  telefono: string;
 }
 
 // --- Función para formatear el tiempo relativo ---
@@ -32,77 +36,52 @@ const formatTiempoRelativo = (timestamp: string) => {
   return `hace ${dias} día(s)`;
 };
 
-// --- Componente Card ---
-const NotificacionCard = ({ notificacion, onMarcarComoLeida }: { notificacion: Notificacion, onMarcarComoLeida: (id: number) => void }) => {
-  const config: Record<
-    Notificacion["tipo"],
-    {
-      color: "red" | "blue" | "amber" | "green" | "slate";
-      icon: JSX.Element;
-    }
-  > = {
-    alerta: { color: "red", icon: <AlertTriangle /> },
-    riego: { color: "blue", icon: <Droplets /> },
-    iluminacion: { color: "amber", icon: <Sun /> },
-    cultivo: { color: "green", icon: <Sprout /> },
-    sistema: { color: "slate", icon: <Check /> },
-  };
-
-  const { color, icon } = config[notificacion.tipo] || {
-    color: "slate",
-    icon: <Info />,
-  };
-
+// --- Componente Card (con funcionalidad de expansión) ---
+const NotificacionCard = ({
+  visita,
+  onMarcarComoLeida,
+  onSeleccionar,
+}: {
+  visita: Visita;
+  onMarcarComoLeida: (id: number) => void;
+  onSeleccionar: (visita: Visita) => void;
+  estaSeleccionada: boolean; // Este prop no se usa en este componente, pero no causa problema
+}) => {
   const colorClasses = {
-    red: {
-      bg: "bg-red-50",
-      border: "border-red-500",
-      text: "text-red-600",
-    },
-    blue: {
-      bg: "bg-blue-50",
-      border: "border-blue-500",
-      text: "text-blue-600",
-    },
-    amber: {
-      bg: "bg-amber-50",
-      border: "border-amber-500",
-      text: "text-amber-600",
-    },
-    green: {
-      bg: "bg-green-50",
-      border: "border-green-500",
-      text: "text-green-600",
-    },
-    slate: {
-      bg: "bg-slate-100",
-      border: "border-slate-400",
-      text: "text-slate-600",
-    },
+    bg: "bg-red-50",
+    border: "border-red-500",
+    text: "text-red-600",
   };
 
-  const style = colorClasses[color];
+  const style = colorClasses;
+
+  const handleCardClick = () => {
+    onSeleccionar(visita);
+    if (!visita.leida) {
+      onMarcarComoLeida(visita.id_visita);
+    }
+  };
 
   return (
     <div
-      onClick={() => onMarcarComoLeida(notificacion.id)}
+      onClick={handleCardClick}
       className={`p-4 flex items-start gap-4 rounded-lg border-l-4 cursor-pointer transition-colors ${style.border} ${
-        notificacion.leida ? "bg-white" : `${style.bg} hover:bg-opacity-80`
+        visita.leida ? "bg-white" : `${style.bg} hover:bg-opacity-80`
       }`}
     >
       <div
         className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${style.bg} ${style.text}`}
       >
-        {React.cloneElement(icon, { className: "w-5 h-5" })}
+        <AlertTriangle className="w-5 h-5" />
       </div>
       <div className="flex-grow">
-        <h3 className="font-bold text-slate-800">{notificacion.titulo}</h3>
-        <p className="text-sm text-slate-600 mt-1">{notificacion.mensaje}</p>
+        <h3 className="font-bold text-slate-800">Nueva visita: {visita.nombre_visitante}</h3>
+        <p className="text-sm text-slate-600 mt-1">{visita.motivo || "Motivo no especificado"}</p>
         <p className="text-xs text-slate-400 mt-2">
-          {formatTiempoRelativo(notificacion.timestamp)}
+          {formatTiempoRelativo(visita.createdAt)}
         </p>
       </div>
-      {!notificacion.leida && (
+      {!visita.leida && (
         <div
           className="w-2.5 h-2.5 bg-teal-500 rounded-full self-center flex-shrink-0"
           title="No leída"
@@ -112,11 +91,71 @@ const NotificacionCard = ({ notificacion, onMarcarComoLeida }: { notificacion: N
   );
 };
 
+// --- Componente de Detalles de la Visita ---
+const VisitaDetalles = ({ visita, onClose }: { visita: Visita; onClose: () => void }) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      onClick={onClose} // Cierra el modal al hacer clic en el fondo
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative"
+        onClick={(e) => e.stopPropagation()} // Evita que el clic en la tarjeta cierre el modal
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          <XCircle className="w-6 h-6" />
+        </button>
+        <h2 className="text-2xl font-bold text-slate-800 mb-4">Detalles de la Visita</h2>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-slate-600">Nombre:</span>
+            <span className="text-slate-800 text-right">{visita.nombre_visitante}</span>
+          </div>
+          <div className="flex justify-between items-start">
+            <span className="font-medium text-slate-600">Motivo:</span>
+            <span className="text-slate-800 text-right w-1/2 break-words">
+              {visita.motivo || "No especificado"}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-slate-600">Fecha de la Visita:</span>
+            <span className="text-slate-800 text-right">{new Date(visita.fecha_visita).toLocaleDateString()}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-slate-600">Correo:</span>
+            <span className="text-slate-800 text-right break-all">{visita.correo}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-slate-600">Teléfono:</span>
+            <span className="text-slate-800 text-right">{visita.telefono}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-slate-600">Ciudad:</span>
+            <span className="text-slate-800 text-right">{visita.ciudad}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-slate-600">Identificación:</span>
+            <span className="text-slate-800 text-right">{visita.identificacion}</span>
+          </div>
+          <div className="flex justify-between items-center border-t pt-2 mt-4 text-sm text-slate-500">
+            <span className="font-medium">Fecha de Creación:</span>
+            <span className="text-slate-600">{new Date(visita.createdAt).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Componente Principal ---
 export default function NotificacionesPage() {
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [notificaciones, setNotificaciones] = useState<Visita[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [visitaSeleccionada, setVisitaSeleccionada] = useState<Visita | null>(null);
 
   const fetchNotificaciones = async () => {
     try {
@@ -124,17 +163,9 @@ export default function NotificacionesPage() {
       if (!res.ok) {
         throw new Error("No se pudo cargar las notificaciones desde la API.");
       }
-      const data = await res.json();
+      const data: Visita[] = await res.json();
       const formattedData = data
-        .map((visita: any) => ({
-          id: visita.id_visita,
-          tipo: "alerta",
-          titulo: `Nueva visita: ${visita.nombre_visitante}`,
-          mensaje: visita.motivo || "Motivo no especificado",
-          timestamp: visita.createdAt,
-          leida: visita.leida, // Ahora usamos el estado 'leida' de la base de datos
-        }))
-        .sort((a: Notificacion, b: Notificacion) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        .sort((a: Visita, b: Visita) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setNotificaciones(formattedData);
     } catch (err: any) {
       setError(err.message);
@@ -155,7 +186,7 @@ export default function NotificacionesPage() {
       if (!res.ok) {
         throw new Error("No se pudo marcar la notificación como leída.");
       }
-      fetchNotificaciones(); // Vuelve a cargar los datos para reflejar el cambio en la base de datos
+      fetchNotificaciones();
     } catch (err: any) {
       console.error("Error al marcar como leída:", err);
     }
@@ -169,7 +200,7 @@ export default function NotificacionesPage() {
       if (!res.ok) {
         throw new Error("No se pudo marcar todas las notificaciones como leídas.");
       }
-      fetchNotificaciones(); // Vuelve a cargar los datos para reflejar el cambio en la base de datos
+      fetchNotificaciones();
     } catch (error) {
       console.error("Error al marcar todas como leídas:", error);
     }
@@ -208,8 +239,14 @@ export default function NotificacionesPage() {
             <p className="text-center text-red-500">Error: {error}</p>
           ) : notificaciones.length > 0 ? (
             <div className="space-y-4">
-              {notificaciones.map((item) => (
-                <NotificacionCard key={item.id} notificacion={item} onMarcarComoLeida={marcarComoLeida} />
+              {notificaciones.map((visita) => (
+                <NotificacionCard
+                  key={visita.id_visita}
+                  visita={visita}
+                  onMarcarComoLeida={marcarComoLeida}
+                  onSeleccionar={setVisitaSeleccionada}
+                  estaSeleccionada={visitaSeleccionada?.id_visita === visita.id_visita}
+                />
               ))}
             </div>
           ) : (
@@ -217,6 +254,13 @@ export default function NotificacionesPage() {
           )}
         </div>
       </div>
+
+      {visitaSeleccionada && (
+        <VisitaDetalles
+          visita={visitaSeleccionada}
+          onClose={() => setVisitaSeleccionada(null)}
+        />
+      )}
     </main>
   );
 }
