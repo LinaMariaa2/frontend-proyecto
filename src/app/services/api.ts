@@ -30,7 +30,12 @@ api.interceptors.response.use(
             localStorage.removeItem('user');
             window.location.href = '/login';
         }
-        return Promise.reject(error);
+        
+        return Promise.reject(error); // ya mostramos el mensaje
+        
+
+        
+        
     }
 );
 

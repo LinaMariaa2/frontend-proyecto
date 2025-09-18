@@ -2,8 +2,10 @@
 
 import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect } from "react";
-import api from '../../../../../../services/api';
-import { Plus, Edit2, Play, StopCircle, X } from "lucide-react";
+import api from "../../../../../../services/api";
+import { Plus, Edit2, Play, StopCircle, Trash, X } from "lucide-react";
+import Toast from "@/app/(private)/home/admin/components/Toast";
+import { AxiosError } from "axios";
 
 interface ProgramacionRiego {
   id_pg_riego: number;
@@ -29,10 +31,16 @@ export default function ProgramacionRiego() {
     tipo_riego: "",
   });
   const [modalOpen, setModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false); // 🔹 estado para bloquear botones
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+  };
 
   const obtenerProgramaciones = async () => {
     try {
-      const response = await api.get('/programacionRiego');
+      const response = await api.get("/programacionRiego");
       const todas = response.data;
       if (!Array.isArray(todas)) return;
 
@@ -44,12 +52,13 @@ export default function ProgramacionRiego() {
       setProgramaciones(filtradas);
 
       const nuevosEstados: { [key: number]: boolean } = {};
-      filtradas.forEach(p => {
+      filtradas.forEach((p) => {
         nuevosEstados[p.id_pg_riego] = p.estado === false;
       });
       setEstadosDetenidos(nuevosEstados);
     } catch (error) {
-      console.error('Error al obtener programaciones de riego:', error);
+      console.error("Error al obtener programaciones de riego:", error);
+      showToast("❌ Error al cargar programaciones de riego");
     }
   };
 
@@ -61,10 +70,10 @@ export default function ProgramacionRiego() {
     const fecha = new Date(fechaString);
     if (isNaN(fecha.getTime())) return "";
     const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-    const hours = String(fecha.getHours()).padStart(2, '0');
-    const minutes = String(fecha.getMinutes()).padStart(2, '0');
+    const month = String(fecha.getMonth() + 1).padStart(2, "0");
+    const day = String(fecha.getDate()).padStart(2, "0");
+    const hours = String(fecha.getHours()).padStart(2, "0");
+    const minutes = String(fecha.getMinutes()).padStart(2, "0");
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
@@ -81,11 +90,12 @@ export default function ProgramacionRiego() {
 
   const actualizarProgramacion = async () => {
     if (!form.fecha_inicio || !form.fecha_finalizacion || !form.descripcion || !form.tipo_riego) {
-      alert("Por favor, completa todos los campos.");
+      showToast("⚠️ Por favor, completa todos los campos.");
       return;
     }
     if (editandoId === null) return;
 
+    setLoading(true); // 🔹 bloquear mientras se ejecuta
     try {
       const actualizada = {
         fecha_inicio: new Date(form.fecha_inicio).toISOString(),
@@ -99,18 +109,24 @@ export default function ProgramacionRiego() {
       setForm({ fecha_inicio: "", fecha_finalizacion: "", descripcion: "", tipo_riego: "" });
       setEditandoId(null);
       setModalOpen(false);
+      showToast("✅ Programación actualizada correctamente");
     } catch (error) {
       console.error("Error al actualizar la programación:", error);
-      alert("Hubo un error al actualizar la programación.");
+      const axiosError = error as AxiosError<{ mensaje?: string }>;
+      const backendMsg = axiosError.response?.data?.mensaje || "❌ Hubo un error al actualizar la programación.";
+      showToast(backendMsg);
+    } finally {
+      setLoading(false); // 🔹 desbloquear
     }
   };
 
   const agregar = async () => {
     if (!form.fecha_inicio || !form.fecha_finalizacion || !form.descripcion || !form.tipo_riego) {
-      alert("Por favor, completa todos los campos.");
+      showToast("⚠️ Por favor, completa todos los campos.");
       return;
     }
 
+    setLoading(true); // 🔹 bloquear mientras se ejecuta
     try {
       const nueva = {
         fecha_inicio: new Date(form.fecha_inicio).toISOString(),
@@ -119,13 +135,18 @@ export default function ProgramacionRiego() {
         tipo_riego: form.tipo_riego.toLowerCase(),
         id_zona: zonaId,
       };
-      await api.post('/programacionRiego', nueva);
+      await api.post("/programacionRiego", nueva);
       await obtenerProgramaciones();
       setForm({ fecha_inicio: "", fecha_finalizacion: "", descripcion: "", tipo_riego: "" });
       setModalOpen(false);
+      showToast("✅ Programación creada correctamente");
     } catch (error) {
       console.error("Error al agregar la programación:", error);
-      alert("Hubo un error al crear la programación.");
+      const axiosError = error as AxiosError<{ mensaje?: string }>;
+      const backendMsg = axiosError.response?.data?.mensaje || "❌ Hubo un error al crear la programación.";
+      showToast(backendMsg);
+    } finally {
+      setLoading(false); // 🔹 desbloquear
     }
   };
 
@@ -133,11 +154,27 @@ export default function ProgramacionRiego() {
     const nuevoEstado = !estadosDetenidos[id];
     try {
       await api.patch(`/programacionRiego/${id}/estado`, { activo: !nuevoEstado });
-      setEstadosDetenidos(prev => ({ ...prev, [id]: nuevoEstado }));
+      setEstadosDetenidos((prev) => ({ ...prev, [id]: nuevoEstado }));
       await obtenerProgramaciones();
+      showToast(nuevoEstado ? "✅ Riego detenido" : "✅ Riego reanudado");
     } catch (error) {
       console.error("Error al cambiar estado de programación:", error);
-      alert("No se pudo cambiar el estado.");
+      showToast("❌ No se pudo cambiar el estado.");
+    }
+  };
+
+  const eliminarProgramacion = async (id: number) => {
+    try {
+      const res = await api.delete(`/programacionRiego/${id}`);
+      if (res.data.ok) {
+        setProgramaciones((prev) => prev.filter((p) => p.id_pg_riego !== id));
+        showToast(res.data.mensaje || "🗑️ Programación eliminada correctamente");
+      }
+    } catch (error) {
+      console.error("Error al eliminar programación:", error);
+      const axiosError = error as AxiosError<{ mensaje?: string }>;
+      const mensaje = axiosError.response?.data?.mensaje || "❌ No se pudo eliminar la programación.";
+      showToast(mensaje);
     }
   };
 
@@ -149,7 +186,11 @@ export default function ProgramacionRiego() {
           Programación de Riego - Zona {zonaId}
         </h1>
         <button
-          onClick={() => { setEditandoId(null); setForm({ fecha_inicio: "", fecha_finalizacion: "", descripcion: "", tipo_riego: "" }); setModalOpen(true); }}
+          onClick={() => {
+            setEditandoId(null);
+            setForm({ fecha_inicio: "", fecha_finalizacion: "", descripcion: "", tipo_riego: "" });
+            setModalOpen(true);
+          }}
           className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
@@ -159,18 +200,27 @@ export default function ProgramacionRiego() {
 
       {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {programaciones.map(p => {
+        {programaciones.map((p) => {
           const detenido = estadosDetenidos[p.id_pg_riego] ?? false;
+          const ahora = new Date();
+          const inicio = new Date(p.fecha_inicio);
+          const haIniciado = inicio <= ahora;
+
+          const puedeEditarEliminar = !haIniciado || detenido;
+
           return (
-            <div key={p.id_pg_riego} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
+            <div
+              key={p.id_pg_riego}
+              className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col"
+            >
               <div className="space-y-2">
                 <p className="text-sm text-slate-500">
                   <span className="font-semibold text-slate-700">Activación:</span>{" "}
-                  <span className="text-slate-700">{convertirFechaParaInput(p.fecha_inicio)}</span>
+                  <span className="text-slate-700">{new Date(p.fecha_inicio).toLocaleString("es-CO")}</span>
                 </p>
                 <p className="text-sm text-slate-500">
                   <span className="font-semibold text-slate-700">Desactivación:</span>{" "}
-                  <span className="text-slate-700">{convertirFechaParaInput(p.fecha_finalizacion)}</span>
+                  <span className="text-slate-700">{new Date(p.fecha_finalizacion).toLocaleString("es-CO")}</span>
                 </p>
                 <p className="text-sm text-slate-500">
                   <span className="font-semibold text-slate-700">Descripción:</span>{" "}
@@ -182,21 +232,48 @@ export default function ProgramacionRiego() {
                 </p>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-200 flex gap-2">
-                <button
-                  onClick={() => detenerRiego(p.id_pg_riego)}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white transition-colors ${
-                    detenido ? "bg-teal-600 hover:bg-teal-700" : "bg-yellow-500 hover:bg-yellow-600"
-                  }`}
-                >
-                  {detenido ? <Play className="w-4 h-4" /> : <StopCircle className="w-4 h-4" />}
-                  {detenido ? "Reanudar" : "Detener"}
-                </button>
+              <div className="mt-4 pt-4 border-t border-slate-200 flex gap-2 flex-wrap">
+                {haIniciado && (
+                  <button
+                    onClick={() => detenerRiego(p.id_pg_riego)}
+                    className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white transition-colors ${
+                      detenido ? "bg-green-600 hover:bg-green-700" : "bg-yellow-500 hover:bg-yellow-600"
+                    }`}
+                  >
+                    {detenido ? (
+                      <>
+                        <Play className="w-4 h-4" /> Reanudar
+                      </>
+                    ) : (
+                      <>
+                        <StopCircle className="w-4 h-4" /> Detener
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* Editar */}
                 <button
                   onClick={() => editar(p)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold transition-colors"
+                  disabled={!puedeEditarEliminar}
+                  className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold transition-colors ${
+                    puedeEditarEliminar ? "bg-teal-600 hover:bg-teal-700 text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
                 >
-                  <Edit2 className="w-4 h-4" /> Editar
+                  <Edit2 className="w-4 h-4" />
+                  Editar
+                </button>
+
+                {/* Eliminar */}
+                <button
+                  onClick={() => eliminarProgramacion(p.id_pg_riego)}
+                  disabled={!puedeEditarEliminar}
+                  className={`inline-flex items-center justify-center p-2 rounded-lg transition-colors ${
+                    puedeEditarEliminar ? "bg-red-600 hover:bg-red-700 text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                  title="Eliminar"
+                >
+                  <Trash className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -209,9 +286,7 @@ export default function ProgramacionRiego() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800">
-                {editandoId ? "Editar Programación" : "Agregar Programación"}
-              </h2>
+              <h2 className="text-2xl font-bold text-slate-800">{editandoId ? "Editar Programación" : "Agregar Programación"}</h2>
               <button
                 onClick={() => setModalOpen(false)}
                 className="absolute top-4 right-4 p-2 text-slate-500 hover:bg-slate-100 rounded-full"
@@ -223,9 +298,7 @@ export default function ProgramacionRiego() {
 
             <div className="p-6 space-y-4 overflow-y-auto">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Fecha y hora de activación
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Fecha y hora de activación</label>
                 <input
                   type="datetime-local"
                   value={form.fecha_inicio}
@@ -235,9 +308,7 @@ export default function ProgramacionRiego() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Fecha y hora de finalización
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Fecha y hora de finalización</label>
                 <input
                   type="datetime-local"
                   value={form.fecha_finalizacion}
@@ -247,9 +318,7 @@ export default function ProgramacionRiego() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Descripción
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción</label>
                 <input
                   type="text"
                   placeholder="Descripción"
@@ -260,9 +329,7 @@ export default function ProgramacionRiego() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Tipo de riego
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Tipo de riego</label>
                 <select
                   value={form.tipo_riego}
                   onChange={(e) => setForm({ ...form, tipo_riego: e.target.value })}
@@ -285,16 +352,20 @@ export default function ProgramacionRiego() {
               </button>
               <button
                 onClick={editandoId ? actualizarProgramacion : agregar}
+                disabled={loading} // 🔹 bloquear mientras se procesa
                 className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors ${
                   editandoId ? "bg-teal-600 hover:bg-teal-700" : "bg-teal-500 hover:bg-teal-700"
-                }`}
+                } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                {editandoId ? "Guardar Cambios" : "Crear"}
+                {loading ? "Procesando..." : editandoId ? "Guardar Cambios" : "Crear"}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Toast */}
+      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
     </main>
   );
 }

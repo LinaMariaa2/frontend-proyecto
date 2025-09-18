@@ -3,7 +3,9 @@
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import api from "@/app/services/api";
-import { Plus, Pencil, PauseCircle, PlayCircle, X } from "lucide-react";
+import { Plus, Pencil, PauseCircle, PlayCircle, Trash, X } from "lucide-react";
+import Toast from "@/app/(private)/home/admin/components/Toast";
+import { AxiosError } from "axios";
 
 interface ProgramacionIluminacion {
   id_iluminacion: number;
@@ -22,6 +24,8 @@ export default function ProgramacionIluminacion() {
   const [programaciones, setProgramaciones] = useState<ProgramacionIluminacion[]>([]);
   const [form, setForm] = useState({ activacion: "", desactivacion: "", descripcion: "" });
   const [modalOpen, setModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const convertirFechaParaInput = (fechaISO: string) => {
     const fecha = new Date(fechaISO);
@@ -30,7 +34,10 @@ export default function ProgramacionIluminacion() {
     return fechaLocal.toISOString().slice(0, 16);
   };
 
-  // Obtener programaciones al cargar
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+  };
+
   useEffect(() => {
     if (!zonaId) return;
     api
@@ -45,71 +52,131 @@ export default function ProgramacionIluminacion() {
       })
       .catch((err) => {
         console.error("Error al cargar programaciones:", err);
+        showToast("❌ Error al cargar programaciones");
       });
   }, [zonaId]);
 
-  // Crear nueva programación
-  const agregar = () => {
+  const validarProgramacion = (): boolean => {
+    const inicio = new Date(form.activacion);
+    const fin = new Date(form.desactivacion);
+    const ahora = new Date();
+
+    if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+      showToast("⚠️ Debes ingresar fechas válidas.");
+      return false;
+    }
+
+    if (inicio < ahora) {
+      showToast("⚠️ La fecha de inicio no puede estar en el pasado.");
+      return false;
+    }
+
+    if (fin <= inicio) {
+      showToast("⚠️ La fecha de finalización debe ser mayor a la de inicio.");
+      return false;
+    }
+
+    const solapa = programaciones.some((p) => {
+      if (editandoId && p.id_iluminacion === editandoId) return false;
+      const pInicio = new Date(p.fecha_inicio);
+      const pFin = new Date(p.fecha_finalizacion);
+      return inicio < pFin && fin > pInicio;
+    });
+
+    if (solapa) {
+      showToast("⚠️ La programación se solapa con otra existente.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const agregar = async () => {
     if (!form.activacion || !form.desactivacion || !form.descripcion) {
-      alert("Por favor, completa todos los campos.");
+      showToast("⚠️ Por favor, completa todos los campos.");
       return;
     }
-    api
-      .post("/programacionIluminacion", {
+
+    if (!validarProgramacion()) return;
+
+    setLoading(true);
+    try {
+      const res = await api.post("/programacionIluminacion", {
         fecha_inicio: form.activacion,
         fecha_finalizacion: form.desactivacion,
         descripcion: form.descripcion,
         id_zona: parseInt(zonaId as string),
-      })
-      .then((res) => {
-        setProgramaciones((prev) => [...prev, res.data]);
-        setForm({ activacion: "", desactivacion: "", descripcion: "" });
-        setModalOpen(false);
-      })
-      .catch((err) => {
-        console.error("Error al crear programación:", err);
-        alert("Hubo un error al crear la programación.");
       });
+      setProgramaciones((prev) => [...prev, res.data]);
+      setForm({ activacion: "", desactivacion: "", descripcion: "" });
+      setModalOpen(false);
+      showToast("✅ Programación creada con éxito");
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ mensaje?: string }>;
+      console.error("Error al crear programación:", axiosErr);
+      showToast(axiosErr.response?.data?.mensaje || "❌ Hubo un error al crear la programación.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Detener/Reanudar programación
   const detener = async (id: number) => {
-  const nuevoEstado = !estadosDetenidos[id];
-  try {
-    await api.patch(`/programacionIluminacion/${id}/estado`, { activo: nuevoEstado });
-    setEstadosDetenidos((prev) => ({ ...prev, [id]: nuevoEstado }));
-    console.log(`Programación #${id} actualizada a ${!nuevoEstado ? "activa" : "detenida"}`);
-  } catch (error) {
-    console.error("Error al cambiar estado de programación:", error);
-    alert("No se pudo actualizar el estado en el servidor");
-  }
-};
+    const nuevoEstado = !estadosDetenidos[id];
+    try {
+      await api.patch(`/programacionIluminacion/${id}/estado`, { activo: nuevoEstado });
+      setEstadosDetenidos((prev) => ({ ...prev, [id]: nuevoEstado }));
+      showToast(nuevoEstado ? "✅ Iluminación detenida" : "✅ Iluminación reanudada");
+    } catch (err: unknown) {
+      console.error("Error al cambiar estado de programación:", err);
+      showToast("❌ No se pudo actualizar el estado en el servidor");
+    }
+  };
 
-
-  // Actualizar programación
-  const actualizarProgramacion = () => {
+  const actualizarProgramacion = async () => {
     if (!form.activacion || !form.desactivacion || !form.descripcion) {
-      alert("Por favor, completa todos los campos.");
+      showToast("⚠️ Por favor, completa todos los campos.");
       return;
     }
+
+    if (!validarProgramacion()) return;
     if (editandoId === null) return;
 
-    api
-      .put(`/programacionIluminacion/${editandoId}`, {
+    setLoading(true);
+    try {
+      const res = await api.put(`/programacionIluminacion/${editandoId}`, {
         fecha_inicio: form.activacion,
         fecha_finalizacion: form.desactivacion,
         descripcion: form.descripcion,
-      })
-      .then((res) => {
-        setProgramaciones((prev) => prev.map((p) => (p.id_iluminacion === editandoId ? res.data : p)));
-        setForm({ activacion: "", desactivacion: "", descripcion: "" });
-        setEditandoId(null);
-        setModalOpen(false);
-      })
-      .catch((err) => {
-        console.error("Error al actualizar programacion", err);
-        alert("Hubo un error al actualizar la programación.");
       });
+      setProgramaciones((prev) =>
+        prev.map((p) =>
+          p.id_iluminacion === editandoId ? res.data.programacion : p
+        )
+      );
+      setForm({ activacion: "", desactivacion: "", descripcion: "" });
+      setEditandoId(null);
+      setModalOpen(false);
+      showToast(res.data.mensaje || "✅ Programación actualizada");
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ mensaje?: string }>;
+      const backendMsg = axiosErr.response?.data?.mensaje || "Hubo un error al actualizar la programación.";
+      showToast(backendMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const eliminarProgramacion = async (programacion: ProgramacionIluminacion) => {
+    try {
+      await api.delete(`/programacionIluminacion/${programacion.id_iluminacion}`);
+      setProgramaciones((prev) =>
+        prev.filter((p) => p.id_iluminacion !== programacion.id_iluminacion)
+      );
+      showToast("🗑️ Programación eliminada correctamente");
+    } catch (err: unknown) {
+      console.error("Error al eliminar programación:", err);
+      showToast("❌ No se pudo eliminar la programación");
+    }
   };
 
   return (
@@ -136,85 +203,94 @@ export default function ProgramacionIluminacion() {
 
       {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {programaciones.map((p) => (
-          <div
-            key={p.id_iluminacion}
-            className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col"
-          >
-            <div className="space-y-2">
-              <p className="text-sm text-slate-500">
-                <span className="font-semibold text-slate-700">Activación:</span>{" "}
-                <span className="text-slate-700">
-                  {p.fecha_inicio
-                    ? new Date(p.fecha_inicio).toLocaleString("es-CO", {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })
-                    : ""}
-                </span>
-              </p>
-              <p className="text-sm text-slate-500">
-                <span className="font-semibold text-slate-700">Desactivación:</span>{" "}
-                <span className="text-slate-700">
-                  {p.fecha_finalizacion
-                    ? new Date(p.fecha_finalizacion).toLocaleString("es-CO", {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })
-                    : ""}
-                </span>
-              </p>
-              <p className="text-sm text-slate-500">
-                <span className="font-semibold text-slate-700">Descripción:</span>{" "}
-                <span className="text-slate-700">{p.descripcion}</span>
-              </p>
-            </div>
+        {programaciones.map((p) => {
+          const ahora = new Date();
+          const inicio = new Date(p.fecha_inicio);
+          const haIniciado = inicio <= ahora;
+          const estaDetenida = estadosDetenidos[p.id_iluminacion];
+          const puedeEditarEliminar = !haIniciado || estaDetenida;
 
-            <div className="mt-4 pt-4 border-t border-slate-200 flex gap-2">
-              <button
-                onClick={() => detener(p.id_iluminacion)}
-                className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white transition-colors ${
-                  estadosDetenidos[p.id_iluminacion]
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-yellow-500 hover:bg-yellow-600"
-                }`}
-              >
-                {estadosDetenidos[p.id_iluminacion] ? (
-                  <>
-                    <PlayCircle className="w-4 h-4" /> Reanudar
-                  </>
-                ) : (
-                  <>
-                    <PauseCircle className="w-4 h-4" /> Detener
-                  </>
+          return (
+            <div
+              key={p.id_iluminacion}
+              className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col"
+            >
+              <div className="space-y-2">
+                <p className="text-sm text-slate-500">
+                  <span className="font-semibold text-slate-700">Activación:</span>{" "}
+                  {new Date(p.fecha_inicio).toLocaleString("es-CO")}
+                </p>
+                <p className="text-sm text-slate-500">
+                  <span className="font-semibold text-slate-700">Desactivación:</span>{" "}
+                  {new Date(p.fecha_finalizacion).toLocaleString("es-CO")}
+                </p>
+                <p className="text-sm text-slate-500">
+                  <span className="font-semibold text-slate-700">Descripción:</span>{" "}
+                  {p.descripcion}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-slate-200 flex gap-2 flex-wrap">
+                {haIniciado && (
+                  <button
+                    onClick={() => detener(p.id_iluminacion)}
+                    className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white transition-colors ${
+                      estaDetenida
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-yellow-500 hover:bg-yellow-600"
+                    }`}
+                  >
+                    {estaDetenida ? (
+                      <>
+                        <PlayCircle className="w-4 h-4" /> Reanudar
+                      </>
+                    ) : (
+                      <>
+                        <PauseCircle className="w-4 h-4" /> Detener
+                      </>
+                    )}
+                  </button>
                 )}
-              </button>
 
-              <button
-                onClick={() => {
-                  setEditandoId(p.id_iluminacion);
-                  setForm({
-                    activacion: p.fecha_inicio ? convertirFechaParaInput(p.fecha_inicio) : "",
-                    desactivacion: p.fecha_finalizacion ? convertirFechaParaInput(p.fecha_finalizacion) : "",
-                    descripcion: p.descripcion,
-                  });
-                  setModalOpen(true);
-                }}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors"
-              >
-                <Pencil className="w-4 h-4" /> Actualizar
-              </button>
+                {/* Editar */}
+                <button
+                  onClick={() => {
+                    setEditandoId(p.id_iluminacion);
+                    setForm({
+                      activacion: convertirFechaParaInput(p.fecha_inicio),
+                      desactivacion: convertirFechaParaInput(p.fecha_finalizacion),
+                      descripcion: p.descripcion,
+                    });
+                    setModalOpen(true);
+                  }}
+                  disabled={!puedeEditarEliminar}
+                  className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold transition-colors ${
+                    puedeEditarEliminar
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  <Pencil className="w-4 h-4" />
+                  Editar
+                </button>
+
+                {/* Eliminar */}
+                <button
+                  onClick={() => eliminarProgramacion(p)}
+                  disabled={!puedeEditarEliminar}
+                  className={`inline-flex items-center justify-center p-2 rounded-lg transition-colors ${
+                    puedeEditarEliminar
+                      ? "bg-red-600 hover:bg-red-700 text-white"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                  title="Eliminar"
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Modal */}
@@ -228,7 +304,6 @@ export default function ProgramacionIluminacion() {
               <button
                 onClick={() => setModalOpen(false)}
                 className="absolute top-4 right-4 p-2 text-slate-500 hover:bg-slate-100 rounded-full"
-                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -243,7 +318,7 @@ export default function ProgramacionIluminacion() {
                   type="datetime-local"
                   value={form.activacion}
                   onChange={(e) => setForm({ ...form, activacion: e.target.value })}
-                  className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500"
                 />
               </div>
 
@@ -255,7 +330,7 @@ export default function ProgramacionIluminacion() {
                   type="datetime-local"
                   value={form.desactivacion}
                   onChange={(e) => setForm({ ...form, desactivacion: e.target.value })}
-                  className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500"
                 />
               </div>
 
@@ -265,33 +340,37 @@ export default function ProgramacionIluminacion() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Descripción"
                   value={form.descripcion}
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                  className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500"
                 />
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-6 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-colors"
+                className="px-6 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100"
               >
                 Cancelar
               </button>
               <button
                 onClick={editandoId ? actualizarProgramacion : agregar}
-                className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors ${
-                  editandoId ? "bg-green-600 hover:bg-green-700" : "bg-green-500 hover:bg-darkGreen-700"
-                }`}
+                disabled={loading}
+                className={`px-6 py-2 rounded-lg text-white font-semibold ${
+                  editandoId
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-green-500 hover:bg-green-700"
+                } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                {editandoId ? "Guardar Cambios" : "Crear"}
+                {loading ? "Procesando..." : editandoId ? "Guardar Cambios" : "Crear"}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
     </main>
   );
 }
