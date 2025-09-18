@@ -1,22 +1,31 @@
-# Crea una imagen a partir de node con acronimo builder 
-
+# Etapa 1: Builder
 FROM node:18 AS builder
-WORKDIR /app 
+WORKDIR /app
+
+# Copia package.json y package-lock.json para instalar dependencias
 COPY package*.json ./
 RUN npm install
+
+# Copia todo el código fuente
 COPY . .
-# Compila la app para producción.
-RUN npm run build 
+
+# Construye la app para producción
+RUN npm run build
 
 # Etapa 2: Producción
-FROM node:18
-
+FROM node:18-alpine
 WORKDIR /app
-# Copia todo el contenido generado en la etapa de builder hacia esta nueva imagen, mucho mas liviano
-COPY --from=builder /app ./
 
+# Copiamos solo lo necesario del builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./
+
+# Exponemos el puerto que Railway asigna
 EXPOSE 3000
-CMD ["npm", "start"]
 
-# CORREGIR LOS ERRORES ESLINT SI NO NO DESPLEGARA EN PRODUCCION!!
-
+# Comando de inicio usando variable PORT de Railway
+ENV PORT 3000
+CMD ["sh", "-c", "next start -p $PORT"]

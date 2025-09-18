@@ -28,10 +28,10 @@ interface Cultivo {
   id_cultivo: number;
   nombre_cultivo: string;
   descripcion: string;
-  temp_min: number;
-  temp_max: number;
-  humedad_min: number;
-  humedad_max: number;
+  temp_min: number |null;
+  temp_max: number | null;
+  humedad_min: number | null;
+  humedad_max: number | null;
   fecha_inicio: string;
   fecha_fin: string | null;
   responsable_id: number;
@@ -100,10 +100,6 @@ export default function CultivosPage() {
   const [form, setForm] = useState({
     nombre_cultivo: "",
     descripcion: "",
-    temp_min: "",
-    temp_max: "",
-    humedad_min: "",
-    humedad_max: "",
     fecha_inicio: "",
     fecha_fin: "",
     responsable_id: 0
@@ -281,7 +277,7 @@ const fetchCultivos = async () => {
 
 // 📌 useEffect inicial
 useEffect(() => {
-  fetchCultivos();
+  fetchCultivos(); // primera carga
 }, []);
 
 
@@ -303,10 +299,6 @@ const resetForm = () => {
   setForm({
     nombre_cultivo: "",
     descripcion: "",
-    temp_min: "",
-    temp_max: "",
-    humedad_min: "",
-    humedad_max: "",
     fecha_inicio: "",
     fecha_fin: "",
     responsable_id: 0
@@ -321,10 +313,6 @@ const abrirModal = (cultivo: Cultivo | null = null) => {
     setForm({
       nombre_cultivo: cultivo.nombre_cultivo,
       descripcion: cultivo.descripcion,
-      temp_min: String(cultivo.temp_min),
-      temp_max: String(cultivo.temp_max),
-      humedad_min: String(cultivo.humedad_min),
-      humedad_max: String(cultivo.humedad_max),
       fecha_inicio: cultivo.fecha_inicio.slice(0, 10),
       fecha_fin: cultivo.fecha_fin ? cultivo.fecha_fin.slice(0, 10) : "",
       responsable_id: cultivo.responsable_id,
@@ -347,10 +335,6 @@ const agregarCultivo = async () => {
 
   if (!form.nombre_cultivo) nuevosErrores.nombre_cultivo = "El nombre es obligatorio";
   if (!form.descripcion) nuevosErrores.descripcion = "La descripción es obligatoria";
-  if (!form.temp_min) nuevosErrores.temp_min = "La temperatura mínima es obligatoria";
-  if (!form.temp_max) nuevosErrores.temp_max = "La temperatura máxima es obligatoria";
-  if (!form.humedad_min) nuevosErrores.humedad_min = "La humedad mínima es obligatoria";
-  if (!form.humedad_max) nuevosErrores.humedad_max = "La humedad máxima es obligatoria";
   if (!form.fecha_inicio) nuevosErrores.fecha_inicio = "La fecha de inicio es obligatoria";
   if (!form.responsable_id) nuevosErrores.responsable_id = "Selecciona un responsable";
 
@@ -382,10 +366,6 @@ const agregarCultivo = async () => {
     // 📦 Armar payload
     const payload: any = {
       ...form,
-      temp_min: Number(form.temp_min),
-      temp_max: Number(form.temp_max),
-      humedad_min: Number(form.humedad_min),
-      humedad_max: Number(form.humedad_max),
       fecha_fin: form.fecha_fin || null,
       estado: "activo",
     };
@@ -632,69 +612,6 @@ const unitSuffix = (u?: Cultivo["unidad_medida"]) => {
     <p className="text-red-500 text-sm mt-1">{errores.descripcion}</p>
   )}
 
-  {/* Temperaturas */}
-  <div className="grid grid-cols-2 gap-4">
-    <div>
-      <input
-        type="number"
-        placeholder="Temp. Mínima (°C)"
-        value={form.temp_min}
-        onChange={(e) => setForm({ ...form, temp_min: e.target.value })}
-        className={`w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-          errores.temp_min ? "border-red-500" : "border-slate-300"
-        }`}
-      />
-      {errores.temp_min && (
-        <p className="text-red-500 text-sm mt-1">{errores.temp_min}</p>
-      )}
-    </div>
-    <div>
-      <input
-        type="number"
-        placeholder="Temp. Máxima (°C)"
-        value={form.temp_max}
-        onChange={(e) => setForm({ ...form, temp_max: e.target.value })}
-        className={`w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-          errores.temp_max ? "border-red-500" : "border-slate-300"
-        }`}
-      />
-      {errores.temp_max && (
-        <p className="text-red-500 text-sm mt-1">{errores.temp_max}</p>
-      )}
-    </div>
-  </div>
-
-  {/* Humedad */}
-  <div className="grid grid-cols-2 gap-4">
-    <div>
-      <input
-        type="number"
-        placeholder="Humedad Mínima (%)"
-        value={form.humedad_min}
-        onChange={(e) => setForm({ ...form, humedad_min: e.target.value })}
-        className={`w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-          errores.humedad_min ? "border-red-500" : "border-slate-300"
-        }`}
-      />
-      {errores.humedad_min && (
-        <p className="text-red-500 text-sm mt-1">{errores.humedad_min}</p>
-      )}
-    </div>
-    <div>
-      <input
-        type="number"
-        placeholder="Humedad Máxima (%)"
-        value={form.humedad_max}
-        onChange={(e) => setForm({ ...form, humedad_max: e.target.value })}
-        className={`w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-          errores.humedad_max ? "border-red-500" : "border-slate-300"
-        }`}
-      />
-      {errores.humedad_max && (
-        <p className="text-red-500 text-sm mt-1">{errores.humedad_max}</p>
-      )}
-    </div>
-  </div>
 {/* Fechas */}
 <div className="grid grid-cols-2 gap-4">
   {/* Fecha de inicio */}

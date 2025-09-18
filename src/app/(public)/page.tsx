@@ -3,6 +3,7 @@
 import React, { JSX } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import Chatbot from './components/Chatbot';
 // Importamos todos los iconos que necesitaremos de Lucide
 import { 
   Leaf, ArrowRight, Target, Zap, Droplets, SlidersHorizontal, BarChart3, 
@@ -213,7 +214,7 @@ export default function HomePage(): JSX.Element {
             </div>
         </section>
       </main>
-
+      <Chatbot/>
       <Footer />
     </div>
   );
