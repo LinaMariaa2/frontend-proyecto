@@ -1,6 +1,7 @@
 
 "use client";
 
+import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import api from "@/app/services/api";
@@ -161,10 +162,13 @@ export default function GestionUsuariosPage() {
                     </h1>
                     <p className="text-lg text-slate-500 mt-1">Administra los usuarios del sistema.</p>
                 </div>
-                <button onClick={() => setModal({ type: 'create' })} className="px-5 py-2.5 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2">
-                    <PlusCircle className="w-5 h-5"/>
+                <Link
+                    href="/home/admin/configuraciones/registro"
+                    className="px-5 py-2.5 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
+                >
+                    <PlusCircle className="w-5 h-5" />
                     <span>Crear Usuario</span>
-                </button>
+                </Link>
             </div>
             
              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6">
