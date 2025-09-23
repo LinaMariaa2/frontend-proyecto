@@ -3,8 +3,10 @@
 import React, { JSX, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  Leaf, ArrowRight, Zap, Droplets, Users, BellRing, ShieldCheck, Cpu, Code, Database, CheckCircle, Info, Facebook, Instagram, Linkedin, Mail, Phone, MessageSquare, MapPin,
+import Chatbot from './components/Chatbot'; // Asegúrate de tener este componente creado
+import {Leaf, ArrowRight, Target, Zap, Droplets, SlidersHorizontal, BarChart3, 
+  CheckCircle, Users, BellRing, GitBranch, ShieldCheck, Cpu, Code, Database, Info, XCircle,
+  Facebook, Instagram, Linkedin, Mail, Phone, MessageSquare, MapPin,
 } from "lucide-react";
 
 // --- Interfaces ---
@@ -177,30 +179,39 @@ const Footer = (): JSX.Element => (
 export default function HomePage(): JSX.Element {
   const [form, setForm] = useState({ name: "", email: "", phone:"", company:"", message: "" });
   const [status, setStatus] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [modalMessage, setModalMessage] = useState<string>("");
+  const [modalType, setModalType] = useState<"success" | "error" | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setStatus("Enviando...");
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData.entries());
 
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch("http://localhost:4000/api/visita/crear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(data),
       });
 
       if (res.ok) {
-        setStatus("✅ Mensaje enviado correctamente");
-        setForm({ name: "", email: "", phone: "", company: "", message: "" });
+        setModalMessage("Solicitud de visita enviada con éxito.");
+        setModalType("success");
+        setShowForm(false);
       } else {
-        setStatus("❌ Error al enviar el mensaje");
+        const errorData = await res.json();
+        setModalMessage(errorData.message || "Error al enviar la solicitud.");
+        setModalType("error");
       }
     } catch (error) {
-      setStatus("❌ Error de conexión");
+      console.error(error);
+      setModalMessage("Error de conexión con el servidor. Intenta de nuevo más tarde.");
+      setModalType("error");
     }
   };
 
@@ -273,13 +284,135 @@ export default function HomePage(): JSX.Element {
             </motion.p>
 
             <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
-              <Link
-                href="#features"
-                className="font-semibold flex items-center gap-2 py-3 px-6 rounded-xl bg-gradient-to-r from-teal-500 to-green-500 hover:from-teal-600 hover:to-green-600 text-white shadow-lg transition-transform hover:scale-105"
-              >
-                <span>Conocer más</span>
-                <ArrowRight className="w-5 h-5" />
-              </Link>
+              <section className="py-12 text-center">
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="bg-teal-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors"
+                >
+                  Programa tu visita
+                </button>
+              </section>
+              {/* --- Modal con Formulario (Dark Mode) --- */}
+              {showForm && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
+                  <div className="bg-gray-900 rounded-2xl shadow-lg p-8 max-w-lg w-full relative text-gray-100">
+                    {/* Botón de cerrar */}
+                    <button
+                      onClick={() => setShowForm(false)}
+                      className="absolute top-4 right-4 text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      <XCircle className="w-6 h-6" />
+                    </button>
+
+                    <h2 className="text-2xl font-bold text-white mb-6">Agendar Visita</h2>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <input
+                        type="text"
+                        name="nombre_visitante"
+                        placeholder="Nombre completo"
+                        required
+                        className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-teal-500"
+                      />
+                      <input
+                        type="email"
+                        name="correo"
+                        placeholder="Correo electrónico"
+                        required
+                        className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-teal-500"
+                      />
+                      <input
+                        type="text"
+                        name="identificacion"
+                        placeholder="Identificación"
+                        required
+                        className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-teal-500"
+                      />
+                      <input
+                        type="tel"
+                        name="telefono"
+                        placeholder="Teléfono"
+                        required
+                        className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-teal-500"
+                      />
+                      <input
+                        type="text"
+                        name="ciudad"
+                        placeholder="Ciudad"
+                        required
+                        className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-teal-500"
+                      />
+
+                      <label className="block text-sm font-medium text-gray-300">
+                        Ingresa la fecha de la visita
+                      </label>
+                      <input
+                        type="date"
+                        name="fecha_visita"
+                        required
+                        className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 focus:ring-2 focus:ring-teal-500"
+                      />
+                      <textarea
+                        name="motivo"
+                        placeholder="Motivo de la visita"
+                        required
+                        className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-teal-500"
+                      ></textarea>
+
+                      <div className="flex justify-end gap-3 mt-6">
+                        <button
+                          type="button"
+                          onClick={() => setShowForm(false)}
+                          className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700"
+                        >
+                          Enviar
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+
+              {/* --- Modal de Alerta Personalizada --- */}
+              {modalMessage && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                  <div className="bg-white rounded-2xl shadow-lg p-6 max-w-sm w-full relative text-center">
+                    <button
+                      onClick={() => {
+                        setModalMessage("");
+                        setModalType(null);
+                      }}
+                      className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      <XCircle className="w-6 h-6" />
+                    </button>
+                    <div className={`mx-auto mb-4 w-12 h-12 flex items-center justify-center rounded-full ${modalType === "success" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
+                      {modalType === "success" ? (
+                        <CheckCircle className="w-8 h-8" />
+                      ) : (
+                        <XCircle className="w-8 h-8" />
+                      )}
+                    </div>
+                    <p className="text-lg font-semibold text-slate-800">{modalMessage}</p>
+                    <button
+                      onClick={() => {
+                        setModalMessage("");
+                        setModalType(null);
+                      }}
+                      className="mt-4 px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </section>
