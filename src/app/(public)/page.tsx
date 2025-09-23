@@ -1,9 +1,9 @@
 "use client";
 
-import React, { JSX, useState } from "react";
+import React, { JSX, useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import Chatbot from './components/Chatbot'; // Asegúrate de tener este componente creado
+import Chatbot from "./components/Chatbot"; // Asegúrate de tener este componente creado
 import {Leaf, ArrowRight, Target, Zap, Droplets, SlidersHorizontal, BarChart3, 
   CheckCircle, Users, BellRing, GitBranch, ShieldCheck, Cpu, Code, Database, Info, XCircle,
   Facebook, Instagram, Linkedin, Mail, Phone, MessageSquare, MapPin,
@@ -36,7 +36,7 @@ const Header = (): JSX.Element => (
         <a href="#features" className="hover:text-teal-600 dark:hover:text-teal-400">Características</a>
         <a href="#benefits" className="hover:text-teal-600 dark:hover:text-teal-400">Beneficios</a>
         <a href="#tech" className="hover:text-teal-600 dark:hover:text-teal-400">Tecnología</a>
-        <a href="#about" className="hover:text-teal-600 dark:hover:text-teal-400">About</a>
+        <a href="#about" className="hover:text-teal-600 dark:hover:text-teal-400">Sobre Nosotros</a>
         <a href="#contact" className="hover:text-teal-600 dark:hover:text-teal-400">Contacto</a>
         <Link
           href="/login"
@@ -178,14 +178,31 @@ const Footer = (): JSX.Element => (
 // --- Página Principal ---
 export default function HomePage(): JSX.Element {
   const [form, setForm] = useState({ name: "", email: "", phone:"", company:"", message: "" });
-  const [status, setStatus] = useState<string | null>(null);
+  //const [status, setStatus] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [modalMessage, setModalMessage] = useState<string>("");
   const [modalType, setModalType] = useState<"success" | "error" | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  // Cerrar modal con tecla Escape
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowForm(false);
+      }
+    };
+
+    if (showForm) {
+      window.addEventListener("keydown", handleEsc);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, [showForm]);
+
+  //const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  //  setForm({ ...form, [e.target.name]: e.target.value });
+  //};
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -294,7 +311,7 @@ export default function HomePage(): JSX.Element {
               </section>
               {/* --- Modal con Formulario (Dark Mode) --- */}
               {showForm && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
+                <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50"                >
                   <div className="bg-gray-900 rounded-2xl shadow-lg p-8 max-w-lg w-full relative text-gray-100">
                     {/* Botón de cerrar */}
                     <button
@@ -563,91 +580,26 @@ export default function HomePage(): JSX.Element {
                   />
                 </div>
               </div>
-
-              <motion.div>
-                <form
-                  onSubmit={handleSubmit}
-                  className="space-y-6 bg-slate-50 dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700"
-                >
-                  
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Nombre completo</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Correo</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Celular</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={form.phone || ""}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Empresa</label>
-                    <input
-                      type="text"
-                      name="company"
-                      value={form.company || ""}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Mensaje (opcional)</label>
-                    <textarea
-                      name="message"
-                      value={form.message}
-                      onChange={handleChange}
-                      rows={5}
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg resize-none focus:ring-2 focus:ring-teal-500"
-                      placeholder="Escribe tu mensaje..."
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-teal-500 to-green-500 text-white font-semibold py-3 px-6 rounded-lg hover:from-teal-600 hover:to-green-600 shadow-md transition"
-                  >
-                    Enviar mensaje
-                  </button>
-
-                  {status && (
-                    <p className="text-center mt-2 text-sm text-slate-600 dark:text-slate-400">{status}</p>
-                  )}
-                </form>
-              </motion.div>
+               <div className="flex items-center justify-center">
+                <img
+                  src="/img/contact-image.png"
+                  alt="Invernadero moderno"
+                  className="rounded-xl shadow-lg w-full h-auto object-cover"
+                />
+              </div>
             </div>
           </motion.div>
         </section>
-
+              
+      {/* Botón flotante */}              
+      <button
+        onClick={() => setShowForm(true)}
+        className="fixed bottom-6 left-6 bg-teal-600 text-white px-6 py-3 rounded-full font-semibold text-lg shadow-lg hover:bg-teal-700 transition-colors z-50"
+      >
+        Programa tu visita
+      </button>
       </main>
-
+      <Chatbot />
       <Footer />
     </div>
   );
