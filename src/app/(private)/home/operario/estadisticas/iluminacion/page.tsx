@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -14,10 +14,20 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Sun, Droplets, Leaf, AlertCircle } from "lucide-react";
+import { Sun, Droplets, Leaf, AlertCircle, Thermometer } from "lucide-react";
+import { io } from "socket.io-client";
+
+// 🔹 Tipo de dato recibido por socket
+interface LecturaDHT11 {
+  tipo: string;
+  temperatura: number | null;
+  humedad: number | null;
+  unidadTemp: string;
+  unidadHum: string;
+  timestamp: string;
+}
 
 // Datos resumen
-//falta integracion
 const resumen = {
   invernaderosActivos: 3,
   totalInvernaderos: 5,
@@ -70,6 +80,41 @@ export default function EstadisticasIluminacion() {
   const [modalContent, setModalContent] = useState<React.ReactNode | null>(null);
   const [showModal, setShowModal] = useState(false);
 
+  // 🔹 Estados de temperatura y humedad en tiempo real
+  const [temperatura, setTemperatura] = useState<string>("-- °C");
+  const [humedad, setHumedad] = useState<string>("-- %");
+
+  useEffect(() => {
+    const socket = io("http://localhost:4000", {
+      transports: ["websocket"],
+    });
+
+    socket.on("connect", () => {
+      console.log("✅ Conectado al servidor de sockets");
+    });
+
+    socket.on("nuevaLecturaDHT11", (data: LecturaDHT11) => {
+      console.log("📡 Evento nuevaLecturaDHT11 recibido:", data);
+
+      if (data.tipo === "dht11") {
+        if (typeof data.temperatura === "number") {
+          setTemperatura(`${data.temperatura.toFixed(1)} ${data.unidadTemp}`);
+        }
+        if (typeof data.humedad === "number") {
+          setHumedad(`${data.humedad.toFixed(1)} ${data.unidadHum}`);
+        }
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("⚠️ Desconectado del servidor de sockets");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
   const openModal = (content: React.ReactNode) => {
     setModalContent(content);
     setShowModal(true);
@@ -81,8 +126,8 @@ export default function EstadisticasIluminacion() {
     <div className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen space-y-8 transition-all duration-300">
       <h1 className="text-3xl font-bold mb-4">Estadísticas de Iluminación</h1>
 
-      {/* Cards resumen */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+      {/* Cards resumen + nuevas cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5">
         <Card
           icon={<Leaf size={20} />}
           title="Invernaderos Activos"
@@ -119,6 +164,12 @@ export default function EstadisticasIluminacion() {
           }
         />
         <Card icon={<AlertCircle size={20} />} title="Alertas Activas" value="0" />
+
+        {/* card Temperatura */}
+        <Card icon={<Thermometer size={20} />} title="Temperatura" value={temperatura} />
+
+        {/*  card Humedad */}
+        <Card icon={<Droplets size={20} />} title="Humedad" value={humedad} />
       </div>
 
       {/* Línea de historial */}
@@ -145,7 +196,7 @@ export default function EstadisticasIluminacion() {
             <Line
               type="monotone"
               dataKey="iluminacion"
-              stroke="#facc15e1" // amarillo fuerte
+              stroke="#facc15e1"
               strokeWidth={3}
               dot={{ r: 5 }}
             />
