@@ -6,16 +6,33 @@ import { MessageCircle, X, Send } from "lucide-react";
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<{ sender: "user" | "bot"; text: string }[]>([]);
+  const [messages, setMessages] = useState<
+    { sender: "user" | "bot"; text: string }[]
+  >([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
+  // Estado para sessionId (solo se asigna en cliente)
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
-    setMessages(prev => [...prev, { sender: "user", text: input }]);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      let id = sessionStorage.getItem("hortitech_sessionId");
+      if (!id) {
+        id = crypto.randomUUID ? crypto.randomUUID() : "sid_" + Date.now();
+        sessionStorage.setItem("hortitech_sessionId", id);
+      }
+      setSessionId(id);
+    }
+  }, []);
+
+  const sendMessage = async (customMessage?: string) => {
+    const messageToSend = customMessage || input;
+    if (!messageToSend.trim() || !sessionId) return;
+
+    setMessages((prev) => [...prev, { sender: "user", text: messageToSend }]);
     setIsTyping(true);
 
     try {
@@ -24,19 +41,24 @@ export default function Chatbot() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: input, sessionId: "demo123" }),
+          body: JSON.stringify({ message: messageToSend, sessionId }),
         }
       );
       const data = await res.json();
 
-      setMessages(prev => [
-        ...prev,
-        { sender: "bot", text: data.reply || data.output },
-      ]);
+      setMessages((prev) => [
+  ...prev,
+  { sender: "bot", text: (data.reply || data.output || "").replace(/\n/g, "<br/>") },
+]);
+
     } catch {
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
-        { sender: "bot", text: "⚠️ Error al conectar con el servidor." },
+        {
+          sender: "bot",
+          text:
+            "⚠️ Error al conectar con el servidor. <br/><button id='retry-btn' class='underline text-teal-600'>Reintentar</button>",
+        },
       ]);
     } finally {
       setIsTyping(false);
@@ -65,10 +87,49 @@ export default function Chatbot() {
     };
   }, [isOpen]);
 
+  // Llamar al webhook de bienvenida cuando se abre el chat
+  useEffect(() => {
+    if (isOpen) {
+      setMessages([
+        { sender: "bot", text: "⏳ Cargando mensaje de bienvenida..." },
+      ]);
+
+      fetch("https://n8n-production-6d6d.up.railway.app/webhook/chat-welcome")
+        .then((res) => res.json())
+        .then((data) => {
+          setMessages([{ sender: "bot", text: data.reply || data.message }]);
+        })
+        .catch(() => {
+          setMessages([
+            {
+              sender: "bot",
+              text:
+                "⚠️ No se pudo cargar el mensaje de bienvenida. <br/><button id='retry-btn' class='underline text-teal-600'>Reintentar</button>",
+            },
+          ]);
+        });
+    }
+  }, [isOpen]);
+
+  // Listener para botón de reintento en mensajes HTML
+  useEffect(() => {
+    const handleRetry = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && target.id === "retry-btn") {
+        sendMessage();
+      }
+    };
+    document.addEventListener("click", handleRetry);
+    return () => {
+      document.removeEventListener("click", handleRetry);
+    };
+  }, [sessionId, input]);
+
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {/* Botón flotante */}
       <motion.button
+        aria-label={isOpen ? "Cerrar chat" : "Abrir chat"}
         onClick={() => setIsOpen(!isOpen)}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
@@ -116,28 +177,32 @@ export default function Chatbot() {
 
             {/* Mensajes */}
             <div
-              className="flex-1 p-4 overflow-y-auto space-y-3 text-sm bg-gradient-to-b from-slate-50 to-white
-                         scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent"
-            >
+  className="flex-1 p-4 overflow-y-auto space-y-3 text-sm 
+             bg-gradient-to-b from-slate-50 to-white
+             scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent
+             max-h-[60vh]"
+>
+
               {messages.length === 0 && (
                 <div className="text-center text-slate-400 italic">
                   Empieza a chatear con HortiTech 🤖
                 </div>
               )}
               {messages.map((msg, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`max-w-[75%] px-4 py-2 rounded-2xl shadow-md ${
-                    msg.sender === "user"
-                      ? "ml-auto bg-gradient-to-br from-teal-500 to-emerald-600 text-white"
-                      : "mr-auto bg-gradient-to-r from-slate-100 to-slate-200 text-slate-800 border border-slate-200"
-                  }`}
-                >
-                  {msg.text}
-                </motion.div>
+                <div key={idx} className="flex items-start gap-2">
+                  {msg.sender === "bot" && <span className="mt-1">🤖</span>}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`max-w-[75%] px-4 py-2 rounded-2xl shadow-md ${
+                      msg.sender === "user"
+                        ? "ml-auto bg-gradient-to-br from-teal-500 to-emerald-600 text-white"
+                        : "mr-auto bg-gradient-to-r from-slate-100 to-slate-200 text-slate-800 border border-slate-200"
+                    }`}
+                    dangerouslySetInnerHTML={{ __html: msg.text }}
+                  />
+                </div>
               ))}
 
               {/* Indicador de escribiendo */}
@@ -158,16 +223,18 @@ export default function Chatbot() {
             <div className="border-t p-3 flex items-center gap-2 bg-white/80 backdrop-blur-sm">
               <input
                 type="text"
+                disabled={!sessionId}
                 className="flex-1 border rounded-full px-4 py-2 text-sm 
-                           focus:outline-none focus:ring-2 focus:ring-teal-500"
+                           focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50"
                 value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && sendMessage()}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                 placeholder="Escribe un mensaje..."
               />
               <button
-                onClick={sendMessage}
-                className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white p-2 rounded-full hover:opacity-90 transition"
+                onClick={() => sendMessage()}
+                disabled={!sessionId}
+                className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white p-2 rounded-full hover:opacity-90 transition disabled:opacity-50"
               >
                 <Send className="w-4 h-4" />
               </button>
