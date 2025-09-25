@@ -7,11 +7,11 @@ import Chatbot from './components/Chatbot';
 // Importamos todos los iconos que necesitaremos de Lucide
 import { 
   Leaf, ArrowRight, Target, Zap, Droplets, SlidersHorizontal, BarChart3, 
-  CheckCircle, Users, BellRing, GitBranch, ShieldCheck, Cpu, Code, Database, Info, XCircle, Facebook, Instagram, Linkedin, Mail, Phone, MessageSquare, MapPin,
+  CheckCircle, Users, BellRing, GitBranch, ShieldCheck, Cpu, Code, Database, Info, XCircle
 } from 'lucide-react';
 
 interface FeatureCardProps {
-  image: string;
+  icon: React.ElementType;
   title: string;
   description: string;
 }
@@ -21,30 +21,25 @@ interface BenefitItemProps {
 }
 
 interface TechStackItemProps {
-  image: string;
+  icon: React.ElementType;
   name: string;
 }
 
 // --- Componentes Reutilizables ---
 const Header = (): JSX.Element => (
-  <header className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800">
+  <header className="bg-slate-50/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
     <nav className="container mx-auto px-6 py-3 flex justify-between items-center">
       <Link
         href="/"
-        className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white"
+        className="flex items-center gap-2 text-xl font-bold text-slate-900"
       >
-        <Leaf className="w-7 h-7 text-teal-600 dark:text-teal-500" />
-        <span>Hortitech</span>
+        <Leaf className="w-7 h-7 text-teal-600" />
+        <span>Hotitech</span>
       </Link>
-      <div className="flex items-center gap-6 text-slate-700 dark:text-slate-300 font-medium">
-        <a href="#features" className="hover:text-teal-600 dark:hover:text-teal-400">Características</a>
-        <a href="#benefits" className="hover:text-teal-600 dark:hover:text-teal-400">Beneficios</a>
-        <a href="#tech" className="hover:text-teal-600 dark:hover:text-teal-400">Tecnología</a>
-        <a href="#about" className="hover:text-teal-600 dark:hover:text-teal-400">About</a>
-        <a href="#contact" className="hover:text-teal-600 dark:hover:text-teal-400">Contacto</a>
+      <div className="flex items-center gap-4">
         <Link
           href="/login"
-          className="bg-teal-600 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors"
+          className="hidden sm:inline-block bg-teal-600 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors"
         >
           Iniciar Sesión
         </Link>
@@ -53,133 +48,48 @@ const Header = (): JSX.Element => (
   </header>
 );
 
-const FeatureCard = ({ image, title, description }: FeatureCardProps) => (
+const FeatureCard = ({
+  icon: Icon,
+  title,
+  description,
+}: FeatureCardProps): JSX.Element => (
   <motion.div
     variants={{ hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } }}
-    whileHover={{ y: -5, scale: 1.03 }}
+    whileHover={{ y: -5, scale: 1.02 }}
     transition={{ type: "spring", stiffness: 300 }}
   >
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 h-full text-center shadow-md hover:shadow-xl dark:shadow-teal-900/20 dark:hover:shadow-teal-800/30 transition-shadow duration-300">
-      {/* Imagen */}
-      <img
-        src={image}
-        alt={title}
-        className="w-60 h-60 mx-auto mb-6 rounded-xl object-cover shadow-md"
-      />
-      <h3 className="text-xl font-bold text-slate-800 dark:text-white">{title}</h3>
-      <p className="text-slate-500 dark:text-slate-400 mt-2">{description}</p>
+    <div className="bg-white p-6 rounded-2xl border border-slate-200 h-full text-center sm:text-left shadow-sm hover:shadow-lg transition-shadow duration-300">
+      <div className="bg-teal-50 text-teal-600 rounded-lg w-fit p-3 mb-4 inline-block">
+        <Icon className="w-8 h-8" />
+      </div>
+      <h3 className="text-xl font-bold text-slate-800">{title}</h3>
+      <p className="text-slate-500 mt-2">{description}</p>
     </div>
   </motion.div>
 );
 
-const BenefitItem = ({ children }: { children: React.ReactNode }) => (
+const BenefitItem = ({ children }: BenefitItemProps): JSX.Element => (
   <motion.li
     variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
     className="flex items-start gap-3"
   >
     <CheckCircle className="flex-shrink-0 w-6 h-6 text-teal-500 mt-1" />
-    <span className="text-slate-600 dark:text-slate-300 text-lg">{children}</span>
+    <span className="text-slate-600 text-lg">{children}</span>
   </motion.li>
 );
 
 const Footer = (): JSX.Element => (
-  <footer className="bg-gradient-to-b from-slate-900 via-slate-950 to-black text-slate-300">
-    <div className="container mx-auto px-6 py-16">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-        
-        {/* Columna 1: Logo y Descripción */}
-        <div>
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-2xl font-bold text-white"
-          >
-            <Leaf className="w-8 h-8 text-teal-500" />
-            <span>Hortitech</span>
-          </Link>
-          <p className="mt-4 text-slate-400 text-sm leading-relaxed">
-            Automatización para la agricultura del futuro.  
-            Tecnología que potencia la productividad y cuida el planeta 🌱
-          </p>
-        </div>
-
-        {/* Columna 2: Navegación */}
-        <div>
-          <h3 className="font-semibold text-white tracking-wider uppercase mb-4">
-            Navegación
-          </h3>
-          <ul className="space-y-3">
-            <li><a href="#features" className="hover:text-teal-400 transition">Características</a></li>
-            <li><a href="#benefits" className="hover:text-teal-400 transition">Beneficios</a></li>
-            <li><a href="#tech" className="hover:text-teal-400 transition">Tecnología</a></li>
-            <li><a href="#about" className="hover:text-teal-400 transition">Sobre Nosotros</a></li>
-            <li><a href="#contact" className="hover:text-teal-400 transition">Contacto</a></li>
-          </ul>
-        </div>
-
-        {/* Columna 3: Contacto */}
-        <div>
-          <h3 className="font-semibold text-white tracking-wider uppercase mb-4">
-            Contacto
-          </h3>
-          <ul className="space-y-3 text-slate-400">
-            <li className="flex items-center gap-3">
-              <Mail className="w-5 h-5 text-teal-400" />
-              <a href="mailto:contacto@hortitech.com" className="hover:text-teal-300">
-                contacto@hortitech.com
-              </a>
-            </li>
-            <li className="flex items-center gap-3">
-              <Phone className="w-5 h-5 text-teal-400" />
-              <span>+57 300 123 4567</span>
-            </li>
-            <li className="flex items-center gap-3">
-              <MapPin className="w-5 h-5 text-teal-400" />
-              <span>Popayán, Colombia</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Columna 4: Redes Sociales */}
-        <div>
-          <h3 className="font-semibold text-white tracking-wider uppercase mb-4">
-            Síguenos
-          </h3>
-          <div className="flex gap-6 mt-4">
-            <a
-              href="#"
-              aria-label="Facebook"
-              className="text-slate-400 hover:text-blue-500 transition text-2xl"
-            >
-              <Facebook />
-            </a>
-            <a
-              href="#"
-              aria-label="Instagram"
-              className="text-slate-400 hover:text-pink-500 transition text-2xl"
-            >
-              <Instagram />
-            </a>
-            <a
-              href="#"
-              aria-label="Linkedin"
-              className="text-slate-400 hover:text-sky-500 transition text-2xl"
-            >
-              <Linkedin />
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {/* Barra inferior */}
-      <div className="mt-12 pt-8 border-t border-slate-700 text-center text-sm text-slate-500">
-        <p>© {new Date().getFullYear()} Hortitech. Todos los derechos reservados.</p>
-      </div>
+  <footer className="bg-white border-t border-slate-200">
+    <div className="container mx-auto px-6 py-8 text-center text-slate-500">
+      <p>
+        &copy; {new Date().getFullYear()} Hotitech. Automatización para la
+        agricultura del futuro.
+      </p>
     </div>
   </footer>
-
 );
 
-// --- Página Principal ---
+// --- Componente Principal de la Página de Inicio ---
 export default function HomePage(): JSX.Element {
   const [showForm, setShowForm] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
@@ -215,81 +125,78 @@ export default function HomePage(): JSX.Element {
 
   const mainFeatures: FeatureCardProps[] = [
     {
-      image: "/img/feature-lighting.png",
+      icon: Zap,
       title: "Iluminación Automatizada",
-      description: "Programa horarios de luz precisos para potenciar el crecimiento."
+      description:
+        "Programa horarios de luz precisos para potenciar el crecimiento de tus cultivos.",
     },
     {
-      image: "/img/feature-irrigation.png",
+      icon: Droplets,
       title: "Riego Inteligente",
-      description: "Asegura hidratación y ahorra agua con sensores inteligentes."
+      description:
+        "Asegura la hidratación perfecta y ahorra agua con riego basado en datos de sensores.",
     },
     {
-      image: "/img/feature-team.png",
+      icon: Users,
       title: "Gestión de Roles",
-      description: "Permisos para administradores y operarios."
+      description:
+        "Asigna permisos específicos para administradores y operarios para un control seguro.",
     },
     {
-      image: "/img/feature-alerts.png",
+      icon: BellRing,
       title: "Alertas y Notificaciones",
-      description: "Avisos de fallos o falta de agua."
-    }
+      description:
+        "Recibe avisos de eventos críticos como fallos de sensores o falta de agua.",
+    },
   ];
 
   const techStack: TechStackItemProps[] = [
-    { image: "/img/tech/react.png", name: "React & Next.js" },
-    { image: "/img/tech/postgresql.png", name: "PostgreSQL" },
-    { image: "/img/tech/esp32.png", name: "ESP32" },
-    { image: "/img/tech/security.png", name: "Auth & Security" },
+    { icon: Code, name: "React & Next.js" },
+    { icon: Database, name: "PostgreSQL" },
+    { icon: Cpu, name: "ESP32" },
+    { icon: ShieldCheck, name: "Auth & Security" },
   ];
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-900 font-sans">
+    <div className="bg-slate-50 font-sans">
       <Header />
 
       <main>
-        {/* Hero */}
-        <section
-          className="relative text-center py-32 px-6 overflow-hidden bg-cover bg-center"
-          style={{ backgroundImage: "url('/img/hero-greenhouse.jpg')" }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60" />
-
+        {/* --- Sección Hero --- */}
+        <section className="text-center py-24 md:py-32 px-6 overflow-hidden">
           <motion.div
-            className="relative container mx-auto text-white"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
+            className="container mx-auto"
+            initial="hidden"
+            animate="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.2 } } }}
           >
             <motion.h1
-              className="text-4xl md:text-6xl font-extrabold drop-shadow-lg"
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.8 }}
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+              className="text-4xl md:text-6xl font-extrabold text-slate-900 leading-tight tracking-tighter"
             >
               La Revolución Inteligente <br /> para tus{" "}
-              <span className="text-teal-400">Invernaderos</span>
+              <span className="text-teal-600">Invernaderos</span>
             </motion.h1>
-
             <motion.p
-              className="max-w-3xl mx-auto mt-6 text-lg md:text-xl text-slate-100"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+              className="max-w-3xl mx-auto mt-6 text-lg text-slate-600"
             >
-              HortiTech es una plataforma tecnológica enfocada en la automatización
-              y gestión inteligente de invernaderos.
+              HortiTech es una plataforma tecnológica enfocada en la automatización y gestión
+              inteligente de invernaderos, diseñada para optimizar el cultivo de flores y otros
+              tipos de cultivos.
             </motion.p>
-
-            <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
+            <motion.div
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+              className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4"
+            >
               <Link
                 href="#features"
-                className="font-semibold flex items-center gap-2 py-3 px-6 rounded-xl bg-gradient-to-r from-teal-500 to-green-500 hover:from-teal-600 hover:to-green-600 text-white shadow-lg transition-transform hover:scale-105"
+                className="font-semibold text-slate-700 flex items-center gap-2 group py-3 px-6"
               >
                 <span>Conocer más</span>
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Link>
-            </div>
+            </motion.div>
           </motion.div>
         </section>
 
@@ -527,136 +434,6 @@ export default function HomePage(): JSX.Element {
             </div>
           </div>
         </section>
-
-        {/* Contact */}
-        <section id="contact" className="py-24 bg-white dark:bg-slate-900">
-          <motion.div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
-                Contáctanos
-              </h2>
-              <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
-                ¿Listo para revolucionar tu invernadero? Estamos aquí para ayudarte 🚀
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-12 items-start">
-              
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-3">
-                    Información de contacto
-                  </h3>
-                  <ul className="space-y-4 text-slate-600 dark:text-slate-300">
-                    <li className="flex items-center gap-3">
-                      <Mail className="w-6 h-6 text-teal-600 dark:text-teal-500" />
-                      <span>contacto@hortitech.com</span>
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <Phone className="w-6 h-6 text-teal-600 dark:text-teal-500" />
-                      <span>+57 300 123 4567</span>
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <MapPin className="w-6 h-6 text-teal-600 dark:text-teal-500" />
-                      <span>Popayán, Colombia</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="overflow-hidden rounded-xl shadow-lg h-[250px]">
-                  <iframe
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15944.328222115579!2d-76.5603823!3d2.47978365!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e300410eb607c65%3A0x614545787e90bea6!2sSENA!5e0!3m2!1ses-419!2sco!4v1758063107090!5m2!1ses-419!2sco"
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    allowFullScreen={true}
-                    loading="lazy"
-                  />
-                </div>
-              </div>
-
-              <motion.div>
-                <form
-                  onSubmit={handleSubmit}
-                  className="space-y-6 bg-slate-50 dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700"
-                >
-                  
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Nombre completo</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Correo</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Celular</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={form.phone || ""}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Empresa</label>
-                    <input
-                      type="text"
-                      name="company"
-                      value={form.company || ""}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-2 font-medium text-slate-800 dark:text-slate-200">Mensaje (opcional)</label>
-                    <textarea
-                      name="message"
-                      value={form.message}
-                      onChange={handleChange}
-                      rows={5}
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg resize-none focus:ring-2 focus:ring-teal-500"
-                      placeholder="Escribe tu mensaje..."
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-teal-500 to-green-500 text-white font-semibold py-3 px-6 rounded-lg hover:from-teal-600 hover:to-green-600 shadow-md transition"
-                  >
-                    Enviar mensaje
-                  </button>
-
-                  {status && (
-                    <p className="text-center mt-2 text-sm text-slate-600 dark:text-slate-400">{status}</p>
-                  )}
-                </form>
-              </motion.div>
-            </div>
-          </motion.div>
-        </section>
-
       </main>
       <Chatbot/>
       <Footer />
