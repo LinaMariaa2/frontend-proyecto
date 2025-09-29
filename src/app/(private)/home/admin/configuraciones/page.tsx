@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { User, Users, HelpCircle, LogOut, UserPlus, Settings } from "lucide-react";
+import { User, Users, LogOut, UserPlus, Settings } from "lucide-react";
 
 // --- Tipos de Datos ---
 interface ConfiguracionItem {
