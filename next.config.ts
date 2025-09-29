@@ -1,13 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // ❌ OJO: Esto hace que el build no falle por errores de ESLint
-    ignoreDuringBuilds: true,
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
+  experimental: {
+    appDir: true,
   },
-  typescript: {
-    // ❌ Esto ignora errores de TS en producción
-    ignoreBuildErrors: true,
-  },
+  // 🚨 clave: fuerza todo a render dinámico
+  output: "standalone",
+  reactStrictMode: false,
 };
 
 module.exports = nextConfig;
