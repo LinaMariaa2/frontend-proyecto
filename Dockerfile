@@ -5,11 +5,11 @@ WORKDIR /app
 # Instala dependencias necesarias para compilar
 RUN apk add --no-cache python3 make g++
 
-# Copia package.json y package-lock.json para instalar dependencias
+# Copia dependencias e instala
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# Copia todo el código fuente
+# Copia el código fuente completo (incluye next.config.js)
 COPY . .
 
 # Construye la app para producción
@@ -19,7 +19,7 @@ RUN npm run build
 FROM node:18-alpine
 WORKDIR /app
 
-# Copiamos solo lo necesario del builder
+# Copiamos lo necesario desde el builder
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
