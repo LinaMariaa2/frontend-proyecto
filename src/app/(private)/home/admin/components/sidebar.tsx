@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Settings, Package, BarChart2, BookText, LogOut, Sprout, Leaf } from 'lucide-react';
 import { useUser } from '@/app/context/UserContext';
-import Image from 'next/image';
 
 // --- Interfaces y Tipos ---
 interface SidebarProps {
@@ -39,7 +38,7 @@ const NavLink = ({ item, isOpen, isActive }: NavItemProps) => (
 );
 
 // --- Componente Principal del Sidebar ---
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     const pathname = usePathname();
     const { user, isLoading, logout } = useUser();
 

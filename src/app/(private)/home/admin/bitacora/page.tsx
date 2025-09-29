@@ -226,7 +226,7 @@ export default function BitacoraPage() {
         const res = await axios.get("http://localhost:4000/api/bitacora?archivadas=false");
         setPublicaciones(res.data);
         setModalMensaje("Publicación eliminada correctamente.");
-      } catch (error: any) {
+      } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 403) {
           setModalMensaje("No puedes eliminar publicaciones de importancia ALTA.");
         } else {
@@ -372,7 +372,7 @@ export default function BitacoraPage() {
                         <option value="">Tipo de evento</option>
                         {tipoEventos.map((tipo) => <option key={tipo} value={tipo}>{tipo.charAt(0).toUpperCase() + tipo.slice(1)}</option>)}
                     </select>
-                    <select value={form.importancia} onChange={(e) => setForm({ ...form, importancia: e.target.value as any })} className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    <select value={form.importancia} onChange={(e) => setForm({ ...form, importancia: e.target.value as Publicacion['importancia'] })} className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                         <option value="alta">Importancia: Alta</option>
                         <option value="media">Importancia: Media</option>
                         <option value="baja">Importancia: Baja</option>
