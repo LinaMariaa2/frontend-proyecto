@@ -3,7 +3,7 @@
 import React, { JSX, useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import Chatbot from "./components/Chatbot"; // Asegúrate de tener este componente creado
+import Chatbot from "./components/Chatbot"; 
 import {Leaf, ArrowRight, Target, Zap, Droplets, SlidersHorizontal, BarChart3, 
   CheckCircle, Users, BellRing, GitBranch, ShieldCheck, Cpu, Code, Database, Info, XCircle,
   Facebook, Instagram, Linkedin, Mail, Phone, MessageSquare, MapPin,
@@ -93,7 +93,7 @@ const Footer = (): JSX.Element => (
             <span>Hortitech</span>
           </Link>
           <p className="mt-4 text-slate-400 text-sm leading-relaxed">
-            Automatización para la agricultura del futuro.  
+            Automatización para la agricultura del futuro.  
             Tecnología que potencia la productividad y cuida el planeta 🌱
           </p>
         </div>
@@ -177,8 +177,8 @@ const Footer = (): JSX.Element => (
 
 // --- Página Principal ---
 export default function HomePage(): JSX.Element {
-  const [form, setForm] = useState({ name: "", email: "", phone:"", company:"", message: "" });
-  //const [status, setStatus] = useState<string | null>(null);
+  // Estado solo para controlar el modal y el formulario, no para los campos
+  // const [form, setForm] = useState({ name: "", email: "", phone:"", company:"", message: "" });
   const [showForm, setShowForm] = useState(false);
   const [modalMessage, setModalMessage] = useState<string>("");
   const [modalType, setModalType] = useState<"success" | "error" | null>(null);
@@ -200,9 +200,6 @@ export default function HomePage(): JSX.Element {
     };
   }, [showForm]);
 
-  //const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  //  setForm({ ...form, [e.target.name]: e.target.value });
-  //};
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -221,14 +218,57 @@ export default function HomePage(): JSX.Element {
         setModalType("success");
         setShowForm(false);
       } else {
-        const errorData = await res.json();
-        setModalMessage(errorData.message || "Error al enviar la solicitud.");
+        // --- COMIENZA LA CORRECCIÓN CLAVE MEJORADA Y ESTÉTICA ---
+        let errorMessage = `Error al enviar la solicitud (Código ${res.status}).`;
+        
+        try {
+          const errorData = await res.json();
+          let specificErrors = [];
+
+          // Caso 1: Buscar el mensaje principal (ej: {"message": "La fecha no puede ser anterior"})
+          if (errorData.message) {
+            specificErrors.push(errorData.message);
+          }
+          
+          // Caso 2: Buscar el objeto de errores de validación anidado (ej: {"errores": {"campo": "mensaje"}})
+          if (errorData.errores && typeof errorData.errores === 'object') {
+            for (const field in errorData.errores) {
+              // Capitalizamos el nombre del campo para una mejor presentación
+              const fieldName = field.charAt(0).toUpperCase() + field.slice(1);
+              // Agregamos el mensaje de error formateado
+              specificErrors.push(`${fieldName}: ${errorData.errores[field]}`);
+            }
+          }
+          
+          // Caso 3: Array de errores de validación simple (ej: {"errors": ["mensaje 1", "mensaje 2"]})
+          else if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+            specificErrors = specificErrors.concat(errorData.errors);
+          }
+          
+          // Si encontramos errores específicos, los unimos con saltos de línea (\n)
+          if (specificErrors.length > 0) {
+            errorMessage = "Errores de validación:\n" + specificErrors.join('\n'); 
+          } else if (errorData.error) {
+            // Caso 4: Error anidado bajo la clave 'error'
+            errorMessage = errorData.error;
+          }
+          
+        } catch (jsonError) {
+          // Si no es JSON, capturamos el texto simple si existe
+          const textError = await res.text();
+          errorMessage = textError || errorMessage;
+        }
+
+        setModalMessage(errorMessage);
         setModalType("error");
+        setShowForm(false); 
+        // --- TERMINA LA CORRECCIÓN CLAVE MEJORADA Y ESTÉTICA ---
       }
     } catch (error) {
       console.error(error);
       setModalMessage("Error de conexión con el servidor. Intenta de nuevo más tarde.");
       setModalType("error");
+      setShowForm(false);
     }
   };
 
@@ -311,7 +351,7 @@ export default function HomePage(): JSX.Element {
               </section>
               {/* --- Modal con Formulario (Dark Mode) --- */}
               {showForm && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50"                >
+                <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50"                >
                   <div className="bg-gray-900 rounded-2xl shadow-lg p-8 max-w-lg w-full relative text-gray-100">
                     {/* Botón de cerrar */}
                     <button
@@ -397,7 +437,7 @@ export default function HomePage(): JSX.Element {
               )}
 
 
-              {/* --- Modal de Alerta Personalizada --- */}
+              {/* --- Modal de Alerta Personalizada (CON MEJORA ESTÉTICA) --- */}
               {modalMessage && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
                   <div className="bg-white rounded-2xl shadow-lg p-6 max-w-sm w-full relative text-center">
@@ -417,7 +457,8 @@ export default function HomePage(): JSX.Element {
                         <XCircle className="w-8 h-8" />
                       )}
                     </div>
-                    <p className="text-lg font-semibold text-slate-800">{modalMessage}</p>
+                    {/* ESTILO CLAVE: whitespace-pre-line para respetar los saltos de línea (\n) */}
+                    <p className="text-lg font-semibold text-slate-800 whitespace-pre-line">{modalMessage}</p> 
                     <button
                       onClick={() => {
                         setModalMessage("");
@@ -591,7 +632,7 @@ export default function HomePage(): JSX.Element {
           </motion.div>
         </section>
               
-      {/* Botón flotante */}              
+      {/* Botón flotante */}              
       <button
         onClick={() => setShowForm(true)}
         className="fixed bottom-6 left-6 bg-teal-600 text-white px-6 py-3 rounded-full font-semibold text-lg shadow-lg hover:bg-teal-700 transition-colors z-50"
