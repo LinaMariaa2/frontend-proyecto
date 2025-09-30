@@ -7,7 +7,8 @@ RUN apk add --no-cache python3 make g++
 
 # Copia dependencias e instala
 COPY package*.json ./
-RUN npm install --include=dev
+RUN npm run build || ls -la .next
+
 
 # Copia el código fuente completo (incluye next.config.*)
 COPY . .
