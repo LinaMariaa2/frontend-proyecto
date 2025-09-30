@@ -263,7 +263,7 @@ export default function NotificacionesPage() {
               ))}
             </div>
           ) : (
-            <p className="text-center text-slate-500">No hay notificaciones</p>
+            <p className="text-center text-slate-500">No hay notificacionees </p>
           )}
         </div>
       </div>
