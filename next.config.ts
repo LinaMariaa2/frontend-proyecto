@@ -3,9 +3,9 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
   experimental: {
-    appDir: true,
+    // fuerza que todas las páginas se procesen dinámicamente
+    serverActions: { enabled: true },
   },
-  // 🚨 clave: fuerza todo a render dinámico
   output: "standalone",
   reactStrictMode: false,
 };
