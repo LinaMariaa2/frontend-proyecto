@@ -1,13 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
   experimental: {
-    // fuerza que todas las páginas se procesen dinámicamente
-    serverActions: { enabled: true },
+    serverActions: true,
   },
-  output: "standalone",
-  reactStrictMode: false,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  output: "standalone", // para Railway
 };
 
 module.exports = nextConfig;
