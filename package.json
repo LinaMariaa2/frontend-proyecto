@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "dev": "next dev --turbopack",
-  "build": "NEXT_IGNORE_INVALID_IMPORTS=1 next build || echo '⚠️ Build forzado aunque haya errores'",
-  "start": "next start -p $PORT",
-  "lint": "next lint"
-},
-
+    "dev": "next dev --turbopack",
+    "build": "NEXT_IGNORE_INVALID_IMPORTS=1 next build || echo '⚠️ Build forzado aunque haya errores'",
+    "start": "next start -p $PORT",
+    "lint": "next lint"
+  },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@supabase/supabase-js": "^2.58.0",
     "axios": "^1.10.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",

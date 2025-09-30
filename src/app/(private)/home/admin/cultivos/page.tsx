@@ -1,5 +1,6 @@
 "use client";
 
+import { supabase } from "../../../../../../supabaseClient";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 // Iconos
@@ -212,6 +213,35 @@ const guardarProduccion = async () => {
   }
 };
 
+useEffect(() => {
+  const channel = supabase
+    .channel("realtime-cultivos")
+    .on(
+      "postgres_changes",
+      {
+        event: "*", // puedes poner "UPDATE" si solo quieres cuando se actualizan
+        schema: "public",
+        table: "tbl_cultivo",
+      },
+      (payload : any) => {
+        console.log("Cambio detectado en cultivo:", payload);
+
+        // Opción 1: refrescar toda la lista
+        fetchCultivos();
+
+        // Opción 2 (más optimizada): actualizar solo ese cultivo en el estado
+        // const updated = payload.new;
+        // setCultivos((prev) =>
+        //   prev.map((c) => (c.id_cultivo === updated.id_cultivo ? updated : c))
+        // );
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
 
 useEffect(() => {
   if (!busquedaResponsable.trim()) {
