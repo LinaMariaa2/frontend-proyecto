@@ -14,7 +14,8 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Droplets, Leaf, AlertCircle, Sun, Clock, X } from "lucide-react"; // Importamos Clock y X de lucide-react
+import { Droplets, Leaf, AlertCircle, Sun, X, Thermometer } from "lucide-react";
+import io from "socket.io-client";
 
 // INTERFAZ PARA LOS DATOS DEL HISTORIAL DE ILUMINACIÓN
 interface HistorialIluminacion {
@@ -31,7 +32,6 @@ interface HistorialIluminacion {
   };
 }
 
-// INTERFACES PARA LOS DATOS DE ESTADÍSTICAS
 interface Invernadero {
   id_invernadero: number;
   nombre: string;
@@ -48,7 +48,15 @@ interface EstadisticasZonas {
   mantenimiento: number;
 }
 
-// DATOS DE PRUEBA PARA LOS GRÁFICOS
+// 🔹 Nueva interfaz para tipar datos de socket
+interface LecturaDHT11 {
+  tipo: "dht11";
+  temperatura?: number;
+  humedad?: number;
+  unidadTemp?: string;
+  unidadHum?: string;
+  timestamp: string;
+}
 const datosIluminacion = {
   Dia: [
     { dia: "Lun", iluminacion: 3 },
@@ -71,16 +79,9 @@ const datosIluminacion = {
 
 const coloresPie = ["#fd8b08ff", "#f0fc4dff", "#fbbf24"];
 
-// NUEVOS DATOS MOCK PARA LAS LECTURAS EN TIEMPO REAL
-const sensorDataMockData = [
-  { icon: <Sun size={20} className="text-yellow-500" />, titulo: "Luminosidad Actual", valor: "550 Lux", descripcion: "Lectura de luz en el invernadero principal." },
-  { icon: <Clock size={20} className="text-emerald-500" />, titulo: "Tiempo de Iluminación Diario", valor: "5 h", descripcion: "Tiempo total de luz artificial hoy." },
-  { icon: <Droplets size={20} className="text-blue-500" />, titulo: "Humedad del Aire", valor: "75%", descripcion: "Promedio de humedad en el ambiente." },
-];
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
-
-// COMPONENTE CARD - (MOVIDO AQUÍ PARA QUE EL COMPONENTE PRINCIPAL LO PUEDA USAR)
+// CARD GENERAL
 function Card({
   title,
   value,
@@ -104,8 +105,18 @@ function Card({
   );
 }
 
-// NUEVO COMPONENTE SENSORCARD - (IMPORTADO DESDE LA PÁGINA DE RIEGO)
-function SensorCard({ icon, titulo, valor, descripcion }: { icon: React.ReactNode; titulo: string; valor: string; descripcion: string }) {
+// SENSOR CARD
+function SensorCard({
+  icon,
+  titulo,
+  valor,
+  descripcion,
+}: {
+  icon: React.ReactNode;
+  titulo: string;
+  valor: string;
+  descripcion: string;
+}) {
   return (
     <div className="bg-gray-100 border border-gray-200 p-4 rounded-xl shadow-sm flex gap-4 items-start">
       <div className="p-2 bg-white rounded-full shadow">{icon}</div>
@@ -118,15 +129,19 @@ function SensorCard({ icon, titulo, valor, descripcion }: { icon: React.ReactNod
   );
 }
 
-// COMPONENTE MODALCONTENT - (MOVIMOS ESTE COMPONENTE PARA QUE EL COMPONENTE PRINCIPAL LO PUEDA USAR)
 interface ModalContentProps {
   title: string;
   data: Invernadero[] | Zona[];
-  dataType: 'invernaderos' | 'zonas';
+  dataType: "invernaderos" | "zonas";
   isLoading: boolean;
 }
 
-function ModalContent({ title, data, dataType, isLoading }: ModalContentProps) {
+function ModalContent({
+  title,
+  data,
+  dataType,
+  isLoading,
+}: ModalContentProps) {
   return (
     <div>
       <h2 className="text-lg font-semibold mb-4 text-slate-800">{title}</h2>
@@ -134,12 +149,16 @@ function ModalContent({ title, data, dataType, isLoading }: ModalContentProps) {
         <p className="text-center text-gray-500 py-4">Cargando...</p>
       ) : data.length > 0 ? (
         <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700">
-          {data.map((item: any, idx) => (
-            <li key={idx} className="bg-gray-50 p-2 rounded-lg">{item.nombre}</li>
+          {data.map((item, idx) => (
+            <li key={idx} className="bg-gray-50 p-2 rounded-lg">
+              {"nombre" in item ? item.nombre : "Elemento"}
+            </li>
           ))}
         </ul>
       ) : (
-        <p className="text-center text-gray-500 py-4">No hay {dataType} activos.</p>
+        <p className="text-center text-gray-500 py-4">
+          No hay {dataType} activos.
+        </p>
       )}
     </div>
   );
@@ -150,32 +169,43 @@ export default function EstadisticasIluminacion() {
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalData, setModalData] = useState<Invernadero[] | Zona[]>([]);
-  const [modalDataType, setModalDataType] = useState<'invernaderos' | 'zonas'>('invernaderos');
+  const [modalDataType, setModalDataType] =
+    useState<"invernaderos" | "zonas">("invernaderos");
   const [isLoading, setIsLoading] = useState(false);
   const [invernaderosActivosCount, setInvernaderosActivosCount] = useState(0);
   const [zonasActivasCount, setZonasActivasCount] = useState(0);
+  const [zonasEstadisticas, setZonasEstadisticas] = useState<
+    { nombre: string; valor: number }[]
+  >([]);
 
-  const [zonasEstadisticas, setZonasEstadisticas] = useState<{ nombre: string; valor: number; }[]>([]);
+  const [historialIluminacion, setHistorialIluminacion] = useState<
+    HistorialIluminacion[]
+  >([]);
 
-  // NUEVO ESTADO PARA EL HISTORIAL DE ILUMINACIÓN
-  const [historialIluminacion, setHistorialIluminacion] = useState<HistorialIluminacion[]>([]);
+  // NUEVOS ESTADOS: lecturas del DHT11
+  const [humedad, setHumedad] = useState<string>("-- %");
+  const [temperatura, setTemperatura] = useState<string>("-- °C");
 
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const invernaderosRes = await fetch(`${BACKEND_URL}/api/invernadero/datos-activos`);
+        const invernaderosRes = await fetch(
+          `${BACKEND_URL}/api/invernadero/datos-activos`
+        );
         if (invernaderosRes.ok) {
           const invernaderos = await invernaderosRes.json();
           setInvernaderosActivosCount(invernaderos.length);
         }
 
-        const zonasRes = await fetch(`${BACKEND_URL}/api/zona/datos-activos`);
+        const zonasRes = await fetch(
+          `${BACKEND_URL}/api/zona/datos-activos`
+        );
         if (zonasRes.ok) {
           const zonas = await zonasRes.json();
           setZonasActivasCount(zonas.length);
         }
       } catch (error) {
-        console.error('Error al obtener los conteos de activos:', error);
+        console.error("Error al obtener los conteos de activos:", error);
       }
     };
 
@@ -188,15 +218,14 @@ export default function EstadisticasIluminacion() {
             { nombre: "Activas", valor: stats.activo },
             { nombre: "Inactivas", valor: stats.inactivo },
             { nombre: "Mantenimiento", valor: stats.mantenimiento },
-          ].filter(data => data.valor > 0);
+          ].filter((data) => data.valor > 0);
           setZonasEstadisticas(formattedData);
         }
       } catch (error) {
-        console.error('Error al obtener estadísticas de zonas:', error);
+        console.error("Error al obtener estadísticas de zonas:", error);
       }
     };
 
-    // NUEVA FUNCIÓN PARA OBTENER EL HISTORIAL DE ILUMINACIÓN
     const fetchHistorialIluminacion = async () => {
       try {
         const res = await fetch(`${BACKEND_URL}/api/historialIluminacion/`);
@@ -207,7 +236,7 @@ export default function EstadisticasIluminacion() {
           setHistorialIluminacion([]);
         }
       } catch (error) {
-        console.error('Error al obtener el historial de iluminación:', error);
+        console.error("Error al obtener el historial de iluminación:", error);
         setHistorialIluminacion([]);
       }
     };
@@ -217,10 +246,45 @@ export default function EstadisticasIluminacion() {
     fetchHistorialIluminacion();
   }, []);
 
+ // 🔹 CONEXIÓN A SOCKET.IO PARA ESCUCHAR NUEVAS LECTURAS DEL DHT11
+useEffect(() => {
+  const socket = io("http://localhost:4000", {
+    transports: ["websocket"],
+  });
+
+  socket.on("connect", () => {
+    console.log("✅ Conectado al servidor de sockets");
+  });
+
+  socket.on("nuevaLecturaDHT11", (data: LecturaDHT11) => {
+    console.log("📡 Evento nuevaLecturaDHT11 recibido:", data);
+
+    if (data.tipo === "dht11") {
+      if (typeof data.temperatura === "number") {
+        setTemperatura(`${data.temperatura.toFixed(1)} °C`);
+      }
+      if (typeof data.humedad === "number") {
+        setHumedad(`${data.humedad.toFixed(1)} %`);
+      }
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("⚠️ Desconectado del servidor de sockets");
+  });
+
+  return () => {
+    socket.disconnect();
+  };
+}, []);
+
+
+
+
   const fetchInvernaderosActivos = async () => {
     setIsLoading(true);
     setModalTitle("Invernaderos Activos");
-    setModalDataType('invernaderos');
+    setModalDataType("invernaderos");
     setShowModal(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/invernadero/datos-activos`);
@@ -230,7 +294,7 @@ export default function EstadisticasIluminacion() {
       const data: Invernadero[] = await res.json();
       setModalData(data);
     } catch (error) {
-      console.error('Error al obtener invernaderos:', error);
+      console.error("Error al obtener invernaderos:", error);
       setModalData([]);
     } finally {
       setIsLoading(false);
@@ -240,7 +304,7 @@ export default function EstadisticasIluminacion() {
   const fetchZonasActivas = async () => {
     setIsLoading(true);
     setModalTitle("Zonas Activas");
-    setModalDataType('zonas');
+    setModalDataType("zonas");
     setShowModal(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/zona/datos-activos`);
@@ -250,7 +314,7 @@ export default function EstadisticasIluminacion() {
       const data: Zona[] = await res.json();
       setModalData(data);
     } catch (error) {
-      console.error('Error al obtener zonas:', error);
+      console.error("Error al obtener zonas:", error);
       setModalData([]);
     } finally {
       setIsLoading(false);
@@ -261,7 +325,9 @@ export default function EstadisticasIluminacion() {
 
   return (
     <div className="pl-20 pr-6 py-6 bg-gray-50 min-h-screen space-y-8 transition-all duration-300 font-sans">
-      <h1 className="text-3xl font-bold mb-4 text-gray-800">Estadísticas de Iluminación</h1>
+      <h1 className="text-3xl font-bold mb-4 text-gray-800">
+        Estadísticas de Iluminación
+      </h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         <Card
@@ -276,17 +342,15 @@ export default function EstadisticasIluminacion() {
           value={zonasActivasCount}
           onClick={fetchZonasActivas}
         />
-        <Card
-          icon={<Sun size={20} />}
-          title="Iluminaciones Hoy"
-          value={4}
-        />
+        <Card icon={<Sun size={20} />} title="Iluminaciones Hoy" value={4} />
         <Card icon={<AlertCircle size={20} />} title="Alertas Activas" value="0" />
       </div>
 
       <div className="bg-white shadow-lg rounded-xl p-5">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="font-semibold text-xl text-gray-800">Historial de Iluminación</h2>
+          <h2 className="font-semibold text-xl text-gray-800">
+            Historial de Iluminación
+          </h2>
           <select
             value={filtro}
             onChange={(e) => setFiltro(e.target.value as "Dia" | "Semana" | "Mes")}
@@ -317,13 +381,24 @@ export default function EstadisticasIluminacion() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white shadow-lg rounded-xl p-6">
-          <h2 className="font-semibold text-xl mb-4 text-gray-800">Estado de Zonas</h2>
+          <h2 className="font-semibold text-xl mb-4 text-gray-800">
+            Estado de Zonas
+          </h2>
           <ResponsiveContainer width="100%" height={250}>
             {zonasEstadisticas.length > 0 ? (
               <PieChart>
-                <Pie data={zonasEstadisticas} dataKey="valor" nameKey="nombre" outerRadius={80} label>
+                <Pie
+                  data={zonasEstadisticas}
+                  dataKey="valor"
+                  nameKey="nombre"
+                  outerRadius={80}
+                  label
+                >
                   {zonasEstadisticas.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={coloresPie[index % coloresPie.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={coloresPie[index % coloresPie.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -337,9 +412,10 @@ export default function EstadisticasIluminacion() {
           </ResponsiveContainer>
         </div>
 
-        {/* CONTENEDOR CON SCROLL PARA LA TABLA */}
         <div className="bg-white shadow-lg rounded-xl p-6 overflow-y-auto max-h-80">
-          <h2 className="font-semibold text-xl mb-4 text-gray-800">Historial de Eventos</h2>
+          <h2 className="font-semibold text-xl mb-4 text-gray-800">
+            Historial de Eventos
+          </h2>
           {historialIluminacion.length > 0 ? (
             <table className="w-full text-sm">
               <thead className="text-gray-600 sticky top-0 bg-white">
@@ -347,21 +423,31 @@ export default function EstadisticasIluminacion() {
                   <th className="py-2 px-2 text-left rounded-tl-lg">Fecha</th>
                   <th className="py-2 px-2 text-left">Invernadero</th>
                   <th className="py-2 px-2 text-left">Zona</th>
-                  <th className="py-2 px-2 text-left rounded-tr-lg">Duración (min)</th>
+                  <th className="py-2 px-2 text-left rounded-tr-lg">
+                    Duración (min)
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {historialIluminacion.map((item, i) => (
-                  <tr key={i} className="border-t border-gray-200 hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={i}
+                    className="border-t border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
                     <td className="py-2 px-2">
-                      {new Date(item.fecha_activacion).toLocaleDateString('es-ES', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                      })}
+                      {new Date(item.fecha_activacion).toLocaleDateString(
+                        "es-ES",
+                        {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        }
+                      )}
                     </td>
-                    <td className="py-2 px-2">{item.zona?.invernadero?.nombre || 'N/A'}</td>
-                    <td className="py-2 px-2">{item.zona?.nombre || 'N/A'}</td>
+                    <td className="py-2 px-2">
+                      {item.zona?.invernadero?.nombre || "N/A"}
+                    </td>
+                    <td className="py-2 px-2">{item.zona?.nombre || "N/A"}</td>
                     <td className="py-2 px-2">{item.duracion_minutos}</td>
                   </tr>
                 ))}
@@ -369,19 +455,32 @@ export default function EstadisticasIluminacion() {
             </table>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-500 py-10">
-              <p className="text-center">No hay eventos de iluminación para mostrar.</p>
+              <p className="text-center">
+                No hay eventos de iluminación para mostrar.
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* NUEVA SECCIÓN: LECTURAS EN TIEMPO REAL */}
+      {/* SECCIÓN: LECTURAS EN TIEMPO REAL (DHT11) */}
       <div className="bg-white shadow-lg rounded-xl p-6">
-        <h2 className="font-semibold text-xl mb-4 text-gray-800">Lecturas en Tiempo Real</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 text-sm">
-          {sensorDataMockData.map((sensor, index) => (
-            <SensorCard key={index} {...sensor} />
-          ))}
+        <h2 className="font-semibold text-xl mb-4 text-gray-800">
+          Lecturas en Tiempo Real
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <SensorCard
+            icon={<Droplets size={20} className="text-blue-500" />}
+            titulo="Humedad Ambiente"
+            valor={humedad}
+            descripcion="Lectura actual del sensor DHT11"
+          />
+          <SensorCard
+            icon={<Thermometer size={20} className="text-red-500" />}
+            titulo="Temperatura Ambiente"
+            valor={temperatura}
+            descripcion="Lectura actual del sensor DHT11"
+          />
         </div>
       </div>
 
@@ -394,7 +493,12 @@ export default function EstadisticasIluminacion() {
             >
               <X size={24} />
             </button>
-            <ModalContent title={modalTitle} data={modalData} dataType={modalDataType} isLoading={isLoading} />
+            <ModalContent
+              title={modalTitle}
+              data={modalData}
+              dataType={modalDataType}
+              isLoading={isLoading}
+            />
           </div>
         </div>
       )}

@@ -49,14 +49,14 @@ export default function Estadisticas() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
         <EstadisticaCard
           title="Riego"
-          description="Visualiza datos históricos y en tiempo real sobre el uso de agua en los ciclos de riego."
+          description="Visualiza datos históricos y en tiempo real sobre los ciclos de riego."
           icon={Droplet}
           href="/home/admin/estadisticas/riego"
           colorClass="bg-gradient-to-br from-sky-500 to-blue-600"
         />
         <EstadisticaCard
           title="Energia"
-          description="Monitorea el consumo energético de los sistemas de iluminación para optimizar costos."
+          description="Monitorea los sistemas de iluminación en tiempo real."
           icon={Sun}
           href="/home/admin/estadisticas/iluminacion"
           colorClass="bg-gradient-to-br from-amber-400 to-orange-500"

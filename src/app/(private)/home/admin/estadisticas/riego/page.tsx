@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
+import io from "socket.io-client";
 
 import {
   LineChart,
@@ -15,7 +16,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Droplets, Sun, Leaf, AlertCircle, X, Clock } from "lucide-react";
+import { Droplets, Leaf, AlertCircle, X, Thermometer } from "lucide-react";
 
 // INTERFAZ SOLO PARA EL HISTORIAL DE RIEGO
 interface HistorialRiego {
@@ -24,6 +25,15 @@ interface HistorialRiego {
   id_zona: number;
   duracion_minutos: number;
   fecha_activacion: string;
+}
+
+// 🟢 INTERFAZ PARA EVENTO DE LECTURA DEL DHT11 🟢
+interface LecturaDHT11 {
+  tipo: "dht11";
+  temperatura: number;
+  humedad: number;
+  unidadTemp: string;
+  unidadHum: string;
 }
 
 // 🟢🟢🟢 INTERFACES PARA LOS DATOS DE ESTADÍSTICAS 🟢🟢🟢
@@ -66,12 +76,6 @@ const datosRiegoMockData = {
 
 const coloresPie = ["#4581dbff", "#10B981", "#22D3EE"];
 
-const sensorDataMockData = [
-  { icon: <Sun size={20} className="text-yellow-500" />, titulo: "Temperatura Ambiental", valor: "28°C", descripcion: "Lectura actual desde sensores exteriores." },
-  { icon: <Droplets size={20} className="text-blue-500" />, titulo: "Humedad del Suelo", valor: "60%", descripcion: "Promedio semanal de humedad del suelo." },
-  { icon: <Clock size={20} className="text-emerald-500" />, titulo: "Tiempo de Riego Diario", valor: "2 h", descripcion: "Tiempo total acumulado hoy." },
-];
-
 // 🟢🟢🟢 COMPONENTE CARD 🟢🟢🟢
 function Card({
   title,
@@ -96,20 +100,6 @@ function Card({
   );
 }
 
-// 🟢🟢🟢 COMPONENTE SENSORCARD 🟢🟢🟢
-function SensorCard({ icon, titulo, valor, descripcion }: { icon: React.ReactNode; titulo: string; valor: string; descripcion: string }) {
-  return (
-    <div className="bg-gray-100 border border-gray-200 p-4 rounded-xl shadow-sm flex gap-4 items-start">
-      <div className="p-2 bg-white rounded-full shadow">{icon}</div>
-      <div>
-        <h3 className="font-semibold text-gray-800">{titulo}</h3>
-        <p className="text-lg font-bold text-gray-700">{valor}</p>
-        <p className="text-gray-500 text-xs">{descripcion}</p>
-      </div>
-    </div>
-  );
-}
-
 // 🟢🟢🟢 COMPONENTE MODALCONTENT 🟢🟢🟢
 interface ModalContentProps {
   title: string;
@@ -126,7 +116,7 @@ function ModalContent({ title, data, dataType, isLoading }: ModalContentProps) {
         <p className="text-center text-gray-500 py-4">Cargando...</p>
       ) : data.length > 0 ? (
         <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700">
-          {data.map((item: any, idx) => (
+          {data.map((item, idx) => (
             <li key={idx} className="bg-gray-50 p-2 rounded-lg">{item.nombre}</li>
           ))}
         </ul>
@@ -155,6 +145,10 @@ const App = () => {
 
   // 🟢 ESTADO SOLO PARA HISTORIAL DE RIEGO 🟢
   const [historialRiego, setHistorialRiego] = useState<HistorialRiego[]>([]);
+
+  // 🟢 ESTADOS PARA TEMPERATURA Y HUMEDAD TIEMPO REAL 🟢
+  const [temperatura, setTemperatura] = useState<string>("-- °C");
+  const [humedad, setHumedad] = useState<string>("-- %");
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -209,6 +203,36 @@ const App = () => {
     fetchCounts();
     fetchEstadisticasZonas();
     fetchHistorialRiego();
+  }, []);
+
+  // 🟢 CONEXIÓN SOCKET.IO PARA LECTURAS DHT11 🟢
+  useEffect(() => {
+    const socket = io(BACKEND_URL, { transports: ["websocket"] });
+
+    socket.on("connect", () => {
+      console.log("✅ Conectado al servidor de sockets");
+    });
+
+    socket.on("nuevaLecturaDHT11", (data: LecturaDHT11) => {
+      console.log("📡 Evento nuevaLecturaDHT11 recibido:", data);
+
+      if (data.tipo === "dht11") {
+        if (typeof data.temperatura === "number") {
+          setTemperatura(`${data.temperatura.toFixed(1)} ${data.unidadTemp}`);
+        }
+        if (typeof data.humedad === "number") {
+          setHumedad(`${data.humedad.toFixed(1)} ${data.unidadHum}`);
+        }
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("⚠️ Desconectado del servidor de sockets");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const fetchInvernaderosActivos = async () => {
@@ -279,6 +303,7 @@ const App = () => {
         <Card icon={<AlertCircle size={20} />} title="Alertas Activas" value="0" />
       </div>
 
+      {/* RESTO DEL CÓDIGO IGUAL */}
       <div className="bg-white shadow-lg rounded-xl p-5">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-semibold text-xl text-gray-800">Historial de Riegos</h2>
@@ -330,7 +355,6 @@ const App = () => {
         <div className="bg-white shadow-lg rounded-xl p-6 flex flex-col">
           <h2 className="font-semibold text-xl mb-4 text-gray-800">Historial de Eventos (Riego)</h2>
           {historialRiego.length > 0 ? (
-            // CONTENEDOR DE LA TABLA CON SCROLL Y ALTURA FIJA
             <div className="overflow-y-auto max-h-80"> 
               <table className="w-full text-sm">
                 <thead className="text-gray-600 sticky top-0 bg-white"> 
@@ -367,12 +391,12 @@ const App = () => {
         </div>
       </div>
 
+      {/* CARDS DHT11 EN TIEMPO REAL AL FINAL  */}
       <div className="bg-white shadow-lg rounded-xl p-6">
-        <h2 className="font-semibold text-xl mb-4 text-gray-800">Lecturas en Tiempo Real</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 text-sm">
-          {sensorDataMockData.map((sensor, index) => (
-            <SensorCard key={index} {...sensor} />
-          ))}
+        <h2 className="font-semibold text-xl mb-4 text-gray-800">Lecturas en Tiempo Real (DHT11)</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <Card icon={<Thermometer size={20} className="text-red-500" />} title="Temperatura ambiente" value={temperatura} />
+          <Card icon={<Droplets size={20} className="text-blue-500" />} title="Humedad ambiente" value={humedad} />
         </div>
       </div>
 

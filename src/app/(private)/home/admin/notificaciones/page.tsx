@@ -1,7 +1,8 @@
 "use client";
 
-import React, { JSX, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Bell, Check, AlertTriangle, XCircle } from "lucide-react";
+import { io } from "socket.io-client";
 
 // --- Interfaces y Tipos ---
 interface Visita {
@@ -17,7 +18,26 @@ interface Visita {
   telefono: string;
 }
 
-// --- Función para formatear el tiempo relativo ---
+interface Notificacion {
+  id: number;
+  titulo: string;
+  mensaje: string;
+  leida: boolean;
+  createdAt: string;
+}
+
+// Tipo discriminado para la lista combinada
+type CombinedNotification =
+  | { id: number; tipo: "visita"; createdAt: string; data: Visita }
+  | { id: number; tipo: "alerta"; createdAt: string; data: Notificacion };
+
+// --- Helpers / Type guards ---
+const isVisita = (obj: unknown): obj is Visita =>
+  typeof obj === "object" && obj !== null && "id_visita" in obj;
+
+const isNotificacion = (obj: unknown): obj is Notificacion =>
+  typeof obj === "object" && obj !== null && "id" in obj && "titulo" in obj;
+
 const formatTiempoRelativo = (timestamp: string) => {
   const ahora = new Date();
   const fechaNotificacion = new Date(timestamp);
@@ -36,16 +56,17 @@ const formatTiempoRelativo = (timestamp: string) => {
   return `hace ${dias} día(s)`;
 };
 
-// --- Componente Card (con funcionalidad de expansión) ---
+// --- Componente Card de visitas ---
 const NotificacionCard = ({
   visita,
   onMarcarComoLeida,
   onSeleccionar,
+  
 }: {
   visita: Visita;
   onMarcarComoLeida: (id: number) => void;
   onSeleccionar: (visita: Visita) => void;
-  estaSeleccionada: boolean; // Este prop no se usa en este componente, pero no causa problema
+  estaSeleccionada: boolean;
 }) => {
   const colorClasses = {
     bg: "bg-red-50",
@@ -66,8 +87,8 @@ const NotificacionCard = ({
     <div
       onClick={handleCardClick}
       className={`p-4 flex items-start gap-4 rounded-lg border-l-4 cursor-pointer transition-colors ${style.border} ${
-        visita.leida ? "bg-white" : `${style.bg} hover:bg-opacity-80`
-      }`}
+        visita.leida ? "hidden" : `${style.bg} hover:bg-opacity-80`}
+      `}
     >
       <div
         className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${style.bg} ${style.text}`}
@@ -75,8 +96,12 @@ const NotificacionCard = ({
         <AlertTriangle className="w-5 h-5" />
       </div>
       <div className="flex-grow">
-        <h3 className="font-bold text-slate-800">Nueva visita: {visita.nombre_visitante}</h3>
-        <p className="text-sm text-slate-600 mt-1">{visita.motivo || "Motivo no especificado"}</p>
+        <h3 className="font-bold text-slate-800">
+          Nueva visita: {visita.nombre_visitante}
+        </h3>
+        <p className="text-sm text-slate-600 mt-1">
+          {visita.motivo || "Motivo no especificado"}
+        </p>
         <p className="text-xs text-slate-400 mt-2">
           {formatTiempoRelativo(visita.createdAt)}
         </p>
@@ -91,16 +116,44 @@ const NotificacionCard = ({
   );
 };
 
+// --- Componente Card de notificación de sensores ---
+const AlertaCard = ({ notificacion }: { notificacion: Notificacion }) => {
+  return (
+    <div
+      className={`p-4 flex items-start gap-4 rounded-lg border-l-4 cursor-pointer transition-colors border-red-500 ${
+        notificacion.leida ? "hidden" : "bg-red-50 hover:bg-opacity-80"
+      }`}
+    >
+      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-red-50 text-red-600">
+        <AlertTriangle className="w-5 h-5" />
+      </div>
+      <div className="flex-grow">
+        <h3 className="font-bold text-slate-800">{notificacion.titulo}</h3>
+        <p className="text-sm text-slate-600 mt-1">{notificacion.mensaje}</p>
+        <p className="text-xs text-slate-400 mt-2">
+          {formatTiempoRelativo(notificacion.createdAt)}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 // --- Componente de Detalles de la Visita ---
-const VisitaDetalles = ({ visita, onClose }: { visita: Visita; onClose: () => void }) => {
+const VisitaDetalles = ({
+  visita,
+  onClose,
+}: {
+  visita: Visita;
+  onClose: () => void;
+}) => {
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-      onClick={onClose} // Cierra el modal al hacer clic en el fondo
+      onClick={onClose}
     >
       <div
         className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative"
-        onClick={(e) => e.stopPropagation()} // Evita que el clic en la tarjeta cierre el modal
+        onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
@@ -108,11 +161,15 @@ const VisitaDetalles = ({ visita, onClose }: { visita: Visita; onClose: () => vo
         >
           <XCircle className="w-6 h-6" />
         </button>
-        <h2 className="text-2xl font-bold text-slate-800 mb-4">Detalles de la Visita</h2>
+        <h2 className="text-2xl font-bold text-slate-800 mb-4">
+          Detalles de la Visita
+        </h2>
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="font-medium text-slate-600">Nombre:</span>
-            <span className="text-slate-800 text-right">{visita.nombre_visitante}</span>
+            <span className="text-slate-800 text-right">
+              {visita.nombre_visitante}
+            </span>
           </div>
           <div className="flex justify-between items-start">
             <span className="font-medium text-slate-600">Motivo:</span>
@@ -121,12 +178,18 @@ const VisitaDetalles = ({ visita, onClose }: { visita: Visita; onClose: () => vo
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="font-medium text-slate-600">Fecha de la Visita:</span>
-            <span className="text-slate-800 text-right">{new Date(visita.fecha_visita).toLocaleDateString()}</span>
+            <span className="font-medium text-slate-600">
+              Fecha de la Visita:
+            </span>
+            <span className="text-slate-800 text-right">
+              {new Date(visita.fecha_visita).toLocaleDateString()}
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-medium text-slate-600">Correo:</span>
-            <span className="text-slate-800 text-right break-all">{visita.correo}</span>
+            <span className="text-slate-800 text-right break-all">
+              {visita.correo}
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-medium text-slate-600">Teléfono:</span>
@@ -137,12 +200,18 @@ const VisitaDetalles = ({ visita, onClose }: { visita: Visita; onClose: () => vo
             <span className="text-slate-800 text-right">{visita.ciudad}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="font-medium text-slate-600">Identificación:</span>
-            <span className="text-slate-800 text-right">{visita.identificacion}</span>
+            <span className="font-medium text-slate-600">
+              Identificación:
+            </span>
+            <span className="text-slate-800 text-right">
+              {visita.identificacion}
+            </span>
           </div>
           <div className="flex justify-between items-center border-t pt-2 mt-4 text-sm text-slate-500">
             <span className="font-medium">Fecha de Creación:</span>
-            <span className="text-slate-600">{new Date(visita.createdAt).toLocaleString()}</span>
+            <span className="text-slate-600">
+              {new Date(visita.createdAt).toLocaleString()}
+            </span>
           </div>
         </div>
       </div>
@@ -153,60 +222,144 @@ const VisitaDetalles = ({ visita, onClose }: { visita: Visita; onClose: () => vo
 // --- Componente Principal ---
 export default function NotificacionesPage() {
   const [notificaciones, setNotificaciones] = useState<Visita[]>([]);
+  const [alertas, setAlertas] = useState<Notificacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [visitaSeleccionada, setVisitaSeleccionada] = useState<Visita | null>(null);
+  const [visitaSeleccionada, setVisitaSeleccionada] = useState<Visita | null>(
+    null
+  );
 
   const fetchNotificaciones = async () => {
     try {
       const res = await fetch("http://localhost:4000/api/visita");
-      if (!res.ok) {
+      if (!res.ok)
         throw new Error("No se pudo cargar las notificaciones desde la API.");
-      }
-      const data: Visita[] = await res.json();
-      const formattedData = data
-        .sort((a: Visita, b: Visita) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const data = (await res.json()) as Visita[];
+      const formattedData = data.sort(
+        (a: Visita, b: Visita) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
       setNotificaciones(formattedData);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchAlertas = async () => {
+    try {
+      const res = await fetch("http://localhost:4000/api/notificaciones");
+      if (!res.ok)
+        throw new Error("No se pudo cargar las alertas desde la API.");
+      const data = (await res.json()) as Notificacion[];
+      const formatted = data.sort(
+        (a: Notificacion, b: Notificacion) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setAlertas(formatted);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+    }
+  };
+
   useEffect(() => {
     fetchNotificaciones();
+    fetchAlertas();
+
+    // --- Socket.io para notificaciones en tiempo real ---
+    const socket = io("http://localhost:4000");
+
+    socket.on("nuevaNotificacion", (payload: unknown) => {
+      if (isVisita(payload)) {
+        setNotificaciones((prev) => {
+          const next = [payload, ...prev];
+          next.sort(
+            (a: Visita, b: Visita) =>
+              new Date(b.createdAt).getTime() -
+              new Date(a.createdAt).getTime()
+          );
+          return next;
+        });
+      } else if (isNotificacion(payload)) {
+        setAlertas((prev) => {
+          const next = [payload, ...prev];
+          next.sort(
+            (a: Notificacion, b: Notificacion) =>
+              new Date(b.createdAt).getTime() -
+              new Date(a.createdAt).getTime()
+          );
+          return next;
+        });
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const marcarComoLeida = async (id: number) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/visita/marcar-leida/${id}`, {
-        method: 'PUT',
-      });
-      if (!res.ok) {
+      const res = await fetch(
+        `http://localhost:4000/api/visita/marcar-leida/${id}`,
+        {
+          method: "PUT",
+        }
+      );
+      if (!res.ok)
         throw new Error("No se pudo marcar la notificación como leída.");
+      await fetchNotificaciones();
+      if (visitaSeleccionada?.id_visita === id) {
+        setVisitaSeleccionada(null);
       }
-      fetchNotificaciones();
-    } catch (err: any) {
-      console.error("Error al marcar como leída:", err);
+    } catch (err: unknown) {
+      console.error(err);
     }
   };
 
   const marcarTodasComoLeidas = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/api/visita/marcar-todas-leidas`, {
-        method: 'PUT',
-      });
-      if (!res.ok) {
+      const res = await fetch(
+        `http://localhost:4000/api/visita/marcar-todas-leidas`,
+        {
+          method: "PUT",
+        }
+      );
+      if (!res.ok)
         throw new Error("No se pudo marcar todas las notificaciones como leídas.");
-      }
-      fetchNotificaciones();
-    } catch (error) {
-      console.error("Error al marcar todas como leídas:", error);
+      await fetchNotificaciones();
+    } catch (err: unknown) {
+      console.error(err);
     }
   };
 
+  const marcarAlertasComoLeidas = () => {
+    setAlertas([]);
+  };
+
   const noLeidasCount = notificaciones.filter((n) => !n.leida).length;
+
+  const visitasNoLeidas = notificaciones.filter((v) => !v.leida);
+
+  const todasNotificaciones: CombinedNotification[] = [
+    ...visitasNoLeidas.map((v) => ({
+      id: v.id_visita,
+      tipo: "visita" as const,
+      createdAt: v.createdAt,
+      data: v,
+    })),
+    ...alertas.map((a) => ({
+      id: a.id,
+      tipo: "alerta" as const,
+      createdAt: a.createdAt,
+      data: a,
+    })),
+  ].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
   return (
     <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
@@ -220,37 +373,54 @@ export default function NotificacionesPage() {
             Aquí encontrarás las últimas alertas y actualizaciones del sistema.
           </p>
         </div>
-        {noLeidasCount > 0 && (
-          <button
-            onClick={marcarTodasComoLeidas}
-            className="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
-          >
-            <Check className="w-5 h-5" />
-            <span>Marcar todas como leídas ({noLeidasCount})</span>
-          </button>
-        )}
+        <div className="flex flex-wrap gap-3">
+          {noLeidasCount > 0 && (
+            <button
+              onClick={marcarTodasComoLeidas}
+              className="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
+            >
+              <Check className="w-5 h-5" />
+              <span>Marcar visitas como leídas ({noLeidasCount})</span>
+            </button>
+          )}
+          {alertas.length > 0 && (
+            <button
+              onClick={marcarAlertasComoLeidas}
+              className="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors flex items-center gap-2"
+            >
+              <Check className="w-5 h-5" />
+              <span>Marcar alertas como leídas ({alertas.length})</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="max-w-4xl mx-auto">
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
           {loading ? (
-            <p className="text-center text-slate-500">Cargando notificaciones...</p>
+            <p className="text-center text-slate-500">
+              Cargando notificaciones...
+            </p>
           ) : error ? (
             <p className="text-center text-red-500">Error: {error}</p>
-          ) : notificaciones.length > 0 ? (
-            <div className="space-y-4">
-              {notificaciones.map((visita) => (
-                <NotificacionCard
-                  key={visita.id_visita}
-                  visita={visita}
-                  onMarcarComoLeida={marcarComoLeida}
-                  onSeleccionar={setVisitaSeleccionada}
-                  estaSeleccionada={visitaSeleccionada?.id_visita === visita.id_visita}
-                />
-              ))}
-            </div>
           ) : (
-            <p className="text-center text-slate-500">No hay notificaciones</p>
+            <div className="space-y-4">
+              {todasNotificaciones.map((n) =>
+                n.tipo === "visita" ? (
+                  <NotificacionCard
+                    key={`visita-${n.id}`}
+                    visita={n.data}
+                    onMarcarComoLeida={marcarComoLeida}
+                    onSeleccionar={setVisitaSeleccionada}
+                    estaSeleccionada={
+                      visitaSeleccionada?.id_visita === n.data.id_visita
+                    }
+                  />
+                ) : (
+                  <AlertaCard key={`alerta-${n.id}`} notificacion={n.data} />
+                )
+              )}
+            </div>
           )}
         </div>
       </div>

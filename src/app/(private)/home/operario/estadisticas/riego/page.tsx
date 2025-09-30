@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -15,7 +15,7 @@ import {
   Cell,
 } from "recharts";
 import { Droplets, Sun, Leaf, AlertCircle } from "lucide-react";
-import { FaClock } from "react-icons/fa";
+import io from "socket.io-client";
 
 const resumen = {
   invernaderosActivos: 3,
@@ -54,20 +54,65 @@ const zonasEstado = [
 
 const coloresPie = ["#4581dbff", "#10B981", "#22D3EE"];
 
-
-
-
-
 const historial = [
   { fecha: "20/07", invernadero: "Inv-1", zona: "Zona 1", tipo: "Riego", accion: "Activado", estado: "Completado" },
   { fecha: "20/07", invernadero: "Inv-2", zona: "Zona 2", tipo: "Riego", accion: "Desactivado", estado: "Pendiente" },
   { fecha: "19/07", invernadero: "Inv-1", zona: "Zona 3", tipo: "Riego", accion: "Activado", estado: "OK" },
 ];
 
+// --- Interfaz para la lectura DHT11 (tipada) ---
+interface LecturaDHT11 {
+  tipo: "dht11";
+  temperatura?: number | null;
+  humedad?: number | null;
+  unidadTemp?: string;
+  unidadHum?: string;
+  timestamp: string;
+}
+
 export default function EstadisticasPage() {
   const [filtro, setFiltro] = useState<"Dia" | "Semana" | "Mes">("Dia");
   const [modalContent, setModalContent] = useState<React.ReactNode | null>(null);
   const [showModal, setShowModal] = useState(false);
+
+  // Estados para DHT11
+  const [temperatura, setTemperatura] = useState<string>("-- °C");
+  const [humedad, setHumedad] = useState<string>("-- %");
+
+  useEffect(() => {
+    // Usamos localhost:4000 como en tu ejemplo (si necesitas usar env, lo cambiamos luego)
+    const socket = io("http://localhost:4000", {
+      transports: ["websocket"],
+    });
+
+    socket.on("connect", () => {
+      console.log("✅ Conectado al servidor de sockets (Operario)");
+    });
+
+    socket.on("nuevaLecturaDHT11", (data: LecturaDHT11) => {
+      console.log("📡 Evento nuevaLecturaDHT11 recibido:", data);
+
+      if (data.tipo === "dht11") {
+        if (typeof data.temperatura === "number") {
+          // usa unidad si viene o "°C" por defecto
+          const unidad = data.unidadTemp ?? "°C";
+          setTemperatura(`${data.temperatura.toFixed(1)} ${unidad}`);
+        }
+        if (typeof data.humedad === "number") {
+          const unidad = data.unidadHum ?? "%";
+          setHumedad(`${data.humedad.toFixed(1)} ${unidad}`);
+        }
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("⚠️ Desconectado del servidor de sockets");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const openModal = (content: React.ReactNode) => {
     setModalContent(content);
@@ -82,22 +127,14 @@ export default function EstadisticasPage() {
 
       {/* Cards resumen con onClick */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-
-
         <Card icon={<Leaf size={20} />} title="Invernaderos Activos" value={`${resumen.invernaderosActivos} / ${resumen.totalInvernaderos}`} onClick={() =>
-          openModal(
-            <ModalContent title="Invernaderos Activos" items={["Inv-1", "Inv-2", "Inv-3"]} />
-          )
+          openModal(<ModalContent title="Invernaderos Activos" items={["Inv-1", "Inv-2", "Inv-3"]} />)
         } />
         <Card icon={<Droplets size={20} />} title="Zonas Activas" value={`${resumen.zonasActivas} / ${resumen.totalZonas}`} onClick={() =>
-          openModal(
-            <ModalContent title="Zonas Activas" items={["Zona 1", "Zona 3", "Zona 4", "Zona 5", "Zona 6", "Zona 7", "Zona 8", "Zona 9", "Zona 10", "Zona 11"]} />
-          )
+          openModal(<ModalContent title="Zonas Activas" items={["Zona 1", "Zona 3", "Zona 4", "Zona 5", "Zona 6", "Zona 7", "Zona 8", "Zona 9", "Zona 10", "Zona 11"]} />)
         } />
         <Card icon={<Droplets size={20} />} title="Riegos Hoy" value={resumen.riegosHoy} onClick={() =>
-          openModal(
-            <ModalContent title="Riegos de Hoy" items={["Inv-1 / Zona 1", "Inv-2 / Zona 3", "Inv-2 / Zona 2", "Inv-3 / Zona 4", "Inv-1 / Zona 5"]} />
-          )
+          openModal(<ModalContent title="Riegos de Hoy" items={["Inv-1 / Zona 1", "Inv-2 / Zona 3", "Inv-2 / Zona 2", "Inv-3 / Zona 4", "Inv-1 / Zona 5"]} />)
         } />
         <Card icon={<AlertCircle size={20} />} title="Alertas Activas" value="0" />
       </div>
@@ -173,13 +210,22 @@ export default function EstadisticasPage() {
         </div>
       </div>
 
-      {/* Sensores */}
+      {/* Sensores (reemplazadas por DHT11) */}
       <div className="bg-white shadow rounded-xl p-6">
         <h2 className="font-semibold text-xl mb-4">Lecturas en Tiempo Real</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 text-sm">
-          <SensorCard icon={<Sun size={20} className="text-yellow-500" />} titulo="Temperatura Ambiental" valor="28°C" descripcion="Lectura actual desde sensores exteriores." />
-          <SensorCard icon={<Droplets size={20} className="text-blue-500" />} titulo="Humedad del Suelo" valor="60%" descripcion="Promedio semanal de humedad del suelo." />
-          <SensorCard icon={<FaClock size={20} className="text-emerald-500" />} titulo="Tiempo de Riego Diario" valor="2 h" descripcion="Tiempo total acumulado hoy." />
+          <SensorCard
+            icon={<Sun size={20} className="text-yellow-500" />}
+            titulo="Temperatura Ambiental"
+            valor={temperatura}
+            descripcion="Lectura actual del sensor."
+          />
+          <SensorCard
+            icon={<Droplets size={20} className="text-blue-500" />}
+            titulo="Humedad Ambiental"
+            valor={humedad}
+            descripcion="Lectura actual del sensor."
+          />
         </div>
       </div>
 
@@ -211,7 +257,7 @@ function Card({
   onClick?: () => void;
 }) {
   return (
-    <div onClick={onClick} className={`cursor-pointer bg-white shadow rounded-xl p-4 flex flex-col items-center text-center hover:ring-2 hover:ring-blue-300 transition`}>
+    <div onClick={onClick} className="cursor-pointer bg-white shadow rounded-xl p-4 flex flex-col items-center text-center hover:ring-2 hover:ring-blue-300 transition">
       <div className="text-blue-500 mb-1">{icon}</div>
       <h3 className="text-xs text-gray-500">{title}</h3>
       <p className="text-lg font-bold">{value}</p>

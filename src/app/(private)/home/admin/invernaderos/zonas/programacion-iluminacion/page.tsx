@@ -84,7 +84,7 @@ export default function ProgramacionIluminacion() {
     });
 
     if (solapa) {
-      showToast("⚠️ La programación se solapa con otra existente.");
+      showToast("⚠️ La programación se sobrepone con otra existente.");
       return false;
     }
 
