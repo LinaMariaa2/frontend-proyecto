@@ -2,42 +2,44 @@
 
 import React, { useState, useEffect } from "react";
 import { Bell, Check, AlertTriangle, XCircle } from "lucide-react";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 
-// --- Interfaces y Tipos ---
-interface Visita {
-  id_visita: number;
-  nombre_visitante: string;
-  motivo: string;
-  createdAt: string;
-  leida: boolean;
-  ciudad: string;
-  fecha_visita: string;
-  correo: string;
-  identificacion: string;
-  telefono: string;
-}
-
-interface Notificacion {
-  id: number;
-  titulo: string;
-  mensaje: string;
+// --- Interfaces ---
+interface NotificacionBase {
+  id: number | string;
+  tipo: "visita" | "alerta_hardware";
+  titulo?: string;
+  mensaje?: string;
   leida: boolean;
   createdAt: string;
+  // Campos adicionales para visitas
+  nombre_visitante?: string;
+  motivo?: string;
+  ciudad?: string;
+  fecha_visita?: string;
+  correo?: string;
+  identificacion?: string;
+  telefono?: string;
 }
 
-// Tipo discriminado para la lista combinada
-type CombinedNotification =
-  | { id: number; tipo: "visita"; createdAt: string; data: Visita }
-  | { id: number; tipo: "alerta"; createdAt: string; data: Notificacion };
+interface NotificacionSocket {
+  id?: number | string;
+  id_visita?: number | string;
+  tipo: "visita" | "alerta_hardware";
+  leida?: boolean;
+  createdAt?: string;
+  titulo?: string;
+  mensaje?: string;
+  nombre_visitante?: string;
+  motivo?: string;
+  ciudad?: string;
+  fecha_visita?: string;
+  correo?: string;
+  identificacion?: string;
+  telefono?: string;
+}
 
-// --- Helpers / Type guards ---
-const isVisita = (obj: unknown): obj is Visita =>
-  typeof obj === "object" && obj !== null && "id_visita" in obj;
-
-const isNotificacion = (obj: unknown): obj is Notificacion =>
-  typeof obj === "object" && obj !== null && "id" in obj && "titulo" in obj;
-
+// --- Helpers ---
 const formatTiempoRelativo = (timestamp: string) => {
   const ahora = new Date();
   const fechaNotificacion = new Date(timestamp);
@@ -56,39 +58,34 @@ const formatTiempoRelativo = (timestamp: string) => {
   return `hace ${dias} día(s)`;
 };
 
-// --- Componente Card de visitas ---
-const NotificacionCard = ({
-  visita,
-  onMarcarComoLeida,
-  onSeleccionar,
-  
-}: {
-  visita: Visita;
-  onMarcarComoLeida: (id: number) => void;
-  onSeleccionar: (visita: Visita) => void;
-  estaSeleccionada: boolean;
-}) => {
-  const colorClasses = {
+const ordenarNotificaciones = (arr: NotificacionBase[]) =>
+  [...arr].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+// --- Card para visitas ---
+const NotificacionCard: React.FC<{
+  visita: NotificacionBase;
+  onMarcarComoLeida: (id: number | string) => void;
+  onSeleccionar: (visita: NotificacionBase) => void;
+}> = ({ visita, onMarcarComoLeida, onSeleccionar }) => {
+  const style = {
     bg: "bg-red-50",
     border: "border-red-500",
     text: "text-red-600",
   };
 
-  const style = colorClasses;
-
-  const handleCardClick = () => {
+  const handleClick = () => {
     onSeleccionar(visita);
-    if (!visita.leida) {
-      onMarcarComoLeida(visita.id_visita);
-    }
+    if (!visita.leida) onMarcarComoLeida(visita.id);
   };
 
   return (
     <div
-      onClick={handleCardClick}
+      onClick={handleClick}
       className={`p-4 flex items-start gap-4 rounded-lg border-l-4 cursor-pointer transition-colors ${style.border} ${
-        visita.leida ? "hidden" : `${style.bg} hover:bg-opacity-80`}
-      `}
+        visita.leida ? "opacity-50" : `${style.bg} hover:bg-opacity-80`
+      }`}
     >
       <div
         className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${style.bg} ${style.text}`}
@@ -97,7 +94,7 @@ const NotificacionCard = ({
       </div>
       <div className="flex-grow">
         <h3 className="font-bold text-slate-800">
-          Nueva visita: {visita.nombre_visitante}
+          Nueva visita: {visita.nombre_visitante || "Sin nombre"}
         </h3>
         <p className="text-sm text-slate-600 mt-1">
           {visita.motivo || "Motivo no especificado"}
@@ -110,18 +107,18 @@ const NotificacionCard = ({
         <div
           className="w-2.5 h-2.5 bg-teal-500 rounded-full self-center flex-shrink-0"
           title="No leída"
-        ></div>
+        />
       )}
     </div>
   );
 };
 
-// --- Componente Card de notificación de sensores ---
-const AlertaCard = ({ notificacion }: { notificacion: Notificacion }) => {
+// --- Card para alertas ---
+const AlertaCard: React.FC<{ notificacion: NotificacionBase }> = ({ notificacion }) => {
   return (
     <div
       className={`p-4 flex items-start gap-4 rounded-lg border-l-4 cursor-pointer transition-colors border-red-500 ${
-        notificacion.leida ? "hidden" : "bg-red-50 hover:bg-opacity-80"
+        notificacion.leida ? "opacity-50" : "bg-red-50 hover:bg-opacity-80"
       }`}
     >
       <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-red-50 text-red-600">
@@ -138,13 +135,10 @@ const AlertaCard = ({ notificacion }: { notificacion: Notificacion }) => {
   );
 };
 
-// --- Componente de Detalles de la Visita ---
-const VisitaDetalles = ({
+// --- Detalle de visita ---
+const VisitaDetalles: React.FC<{ visita: NotificacionBase; onClose: () => void }> = ({
   visita,
   onClose,
-}: {
-  visita: Visita;
-  onClose: () => void;
 }) => {
   return (
     <div
@@ -165,135 +159,104 @@ const VisitaDetalles = ({
           Detalles de la Visita
         </h2>
         <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-slate-600">Nombre:</span>
-            <span className="text-slate-800 text-right">
-              {visita.nombre_visitante}
-            </span>
-          </div>
-          <div className="flex justify-between items-start">
-            <span className="font-medium text-slate-600">Motivo:</span>
-            <span className="text-slate-800 text-right w-1/2 break-words">
-              {visita.motivo || "No especificado"}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-slate-600">
-              Fecha de la Visita:
-            </span>
-            <span className="text-slate-800 text-right">
-              {new Date(visita.fecha_visita).toLocaleDateString()}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-slate-600">Correo:</span>
-            <span className="text-slate-800 text-right break-all">
-              {visita.correo}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-slate-600">Teléfono:</span>
-            <span className="text-slate-800 text-right">{visita.telefono}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-slate-600">Ciudad:</span>
-            <span className="text-slate-800 text-right">{visita.ciudad}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-slate-600">
-              Identificación:
-            </span>
-            <span className="text-slate-800 text-right">
-              {visita.identificacion}
-            </span>
-          </div>
-          <div className="flex justify-between items-center border-t pt-2 mt-4 text-sm text-slate-500">
-            <span className="font-medium">Fecha de Creación:</span>
-            <span className="text-slate-600">
-              {new Date(visita.createdAt).toLocaleString()}
-            </span>
-          </div>
+          <p>
+            <span className="font-medium text-slate-600">Nombre:</span>{" "}
+            {visita.nombre_visitante || "-"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-600">Motivo:</span>{" "}
+            {visita.motivo || "-"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-600">Fecha de la Visita:</span>{" "}
+            {visita.fecha_visita
+              ? new Date(visita.fecha_visita).toLocaleDateString()
+              : "-"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-600">Correo:</span>{" "}
+            {visita.correo || "-"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-600">Teléfono:</span>{" "}
+            {visita.telefono || "-"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-600">Ciudad:</span>{" "}
+            {visita.ciudad || "-"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-600">Identificación:</span>{" "}
+            {visita.identificacion || "-"}
+          </p>
+          <p className="text-sm text-slate-500 border-t pt-2">
+            <span className="font-medium">Creada:</span>{" "}
+            {new Date(visita.createdAt).toLocaleString()}
+          </p>
         </div>
       </div>
     </div>
   );
 };
 
-// --- Componente Principal ---
+// --- Página Principal ---
 export default function NotificacionesPage() {
-  const [notificaciones, setNotificaciones] = useState<Visita[]>([]);
-  const [alertas, setAlertas] = useState<Notificacion[]>([]);
+  const [notificaciones, setNotificaciones] = useState<NotificacionBase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [visitaSeleccionada, setVisitaSeleccionada] = useState<Visita | null>(
-    null
-  );
+  const [visitaSeleccionada, setVisitaSeleccionada] = useState<NotificacionBase | null>(null);
 
+  // --- Fetch inicial ---
   const fetchNotificaciones = async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/visita");
-      if (!res.ok)
-        throw new Error("No se pudo cargar las notificaciones desde la API.");
-      const data = (await res.json()) as Visita[];
-      const formattedData = data.sort(
-        (a: Visita, b: Visita) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setNotificaciones(formattedData);
+      const res = await fetch("http://localhost:4000/api/notificaciones/admin");
+      if (!res.ok) throw new Error("Error cargando notificaciones");
+      const data: NotificacionBase[] = await res.json();
+      setNotificaciones(ordenarNotificaciones(data));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAlertas = async () => {
-    try {
-      const res = await fetch("http://localhost:4000/api/notificaciones");
-      if (!res.ok)
-        throw new Error("No se pudo cargar las alertas desde la API.");
-      const data = (await res.json()) as Notificacion[];
-      const formatted = data.sort(
-        (a: Notificacion, b: Notificacion) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setAlertas(formatted);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-    }
-  };
-
   useEffect(() => {
     fetchNotificaciones();
-    fetchAlertas();
 
-    // --- Socket.io para notificaciones en tiempo real ---
-    const socket = io("http://localhost:4000");
+    const socket: Socket = io("http://localhost:4000");
 
-    socket.on("nuevaNotificacion", (payload: unknown) => {
-      if (isVisita(payload)) {
-        setNotificaciones((prev) => {
-          const next = [payload, ...prev];
-          next.sort(
-            (a: Visita, b: Visita) =>
-              new Date(b.createdAt).getTime() -
-              new Date(a.createdAt).getTime()
-          );
-          return next;
-        });
-      } else if (isNotificacion(payload)) {
-        setAlertas((prev) => {
-          const next = [payload, ...prev];
-          next.sort(
-            (a: Notificacion, b: Notificacion) =>
-              new Date(b.createdAt).getTime() -
-              new Date(a.createdAt).getTime()
-          );
-          return next;
-        });
-      }
+    socket.on("nuevaNotificacion", (payload: NotificacionSocket) => {
+      if (payload.tipo !== "visita" && payload.tipo !== "alerta_hardware") return;
+
+      // Generar ID correcto: visitas usan id_visita, hardware siempre id del backend
+      const id =
+        payload.tipo === "visita"
+          ? payload.id_visita!
+          : payload.id ?? "sin-id"; // alerta_hardware debe tener id único desde backend
+
+      if (!id) return;
+
+      const notificacion: NotificacionBase = {
+        id,
+        tipo: payload.tipo,
+        leida: payload.leida ?? false,
+        createdAt: payload.createdAt ?? new Date().toISOString(),
+        titulo: payload.titulo ?? "",
+        mensaje: payload.mensaje ?? "",
+        nombre_visitante: payload.nombre_visitante ?? "",
+        motivo: payload.motivo ?? "",
+        ciudad: payload.ciudad ?? "",
+        fecha_visita: payload.fecha_visita ?? "",
+        correo: payload.correo ?? "",
+        identificacion: payload.identificacion ?? "",
+        telefono: payload.telefono ?? "",
+      };
+
+      setNotificaciones((prev) => {
+        const existe = prev.some((n) => n.id === notificacion.id);
+        if (existe) return prev;
+        return ordenarNotificaciones([notificacion, ...prev]);
+      });
     });
 
     return () => {
@@ -301,123 +264,77 @@ export default function NotificacionesPage() {
     };
   }, []);
 
-  const marcarComoLeida = async (id: number) => {
+  const marcarComoLeida = async (id: number | string) => {
     try {
-      const res = await fetch(
-        `http://localhost:4000/api/visita/marcar-leida/${id}`,
-        {
-          method: "PUT",
-        }
+      await fetch(`http://localhost:4000/api/notificaciones/${id}/leida`, { method: "PATCH" });
+      setNotificaciones((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, leida: true } : n))
       );
-      if (!res.ok)
-        throw new Error("No se pudo marcar la notificación como leída.");
-      await fetchNotificaciones();
-      if (visitaSeleccionada?.id_visita === id) {
-        setVisitaSeleccionada(null);
-      }
-    } catch (err: unknown) {
+    } catch (err) {
       console.error(err);
     }
   };
 
   const marcarTodasComoLeidas = async () => {
     try {
-      const res = await fetch(
-        `http://localhost:4000/api/visita/marcar-todas-leidas`,
-        {
-          method: "PUT",
-        }
-      );
-      if (!res.ok)
-        throw new Error("No se pudo marcar todas las notificaciones como leídas.");
-      await fetchNotificaciones();
-    } catch (err: unknown) {
+      await fetch("http://localhost:4000/api/notificaciones/marcar-todas-leidas", {
+        method: "PUT",
+      });
+      setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })));
+    } catch (err) {
       console.error(err);
     }
   };
 
-  const marcarAlertasComoLeidas = () => {
-    setAlertas([]);
-  };
-
-  const noLeidasCount = notificaciones.filter((n) => !n.leida).length;
-
-  const visitasNoLeidas = notificaciones.filter((v) => !v.leida);
-
-  const todasNotificaciones: CombinedNotification[] = [
-    ...visitasNoLeidas.map((v) => ({
-      id: v.id_visita,
-      tipo: "visita" as const,
-      createdAt: v.createdAt,
-      data: v,
-    })),
-    ...alertas.map((a) => ({
-      id: a.id,
-      tipo: "alerta" as const,
-      createdAt: a.createdAt,
-      data: a,
-    })),
-  ].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const noLeidas = notificaciones.filter((n) => !n.leida);
 
   return (
     <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
       <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
-        <div>
+        <div className="relative">
           <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
             <Bell className="w-10 h-10 text-slate-500" />
             <span>Notificaciones</span>
+            {noLeidas.length > 0 && (
+              <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center">
+                {noLeidas.length}
+              </span>
+            )}
           </h1>
           <p className="text-lg text-slate-500 mt-1">
-            Aquí encontrarás las últimas alertas y actualizaciones del sistema.
+            Aquí encontrarás las alertas y actualizaciones del sistema.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          {noLeidasCount > 0 && (
-            <button
-              onClick={marcarTodasComoLeidas}
-              className="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
-            >
-              <Check className="w-5 h-5" />
-              <span>Marcar visitas como leídas ({noLeidasCount})</span>
-            </button>
-          )}
-          {alertas.length > 0 && (
-            <button
-              onClick={marcarAlertasComoLeidas}
-              className="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors flex items-center gap-2"
-            >
-              <Check className="w-5 h-5" />
-              <span>Marcar alertas como leídas ({alertas.length})</span>
-            </button>
-          )}
-        </div>
+
+        {noLeidas.length > 0 && (
+          <button
+            onClick={marcarTodasComoLeidas}
+            className="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
+          >
+            <Check className="w-5 h-5" />
+            <span>Marcar todas como leídas ({noLeidas.length})</span>
+          </button>
+        )}
       </div>
 
       <div className="max-w-4xl mx-auto">
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
           {loading ? (
-            <p className="text-center text-slate-500">
-              Cargando notificaciones...
-            </p>
+            <p className="text-center text-slate-500">Cargando notificaciones...</p>
           ) : error ? (
             <p className="text-center text-red-500">Error: {error}</p>
           ) : (
             <div className="space-y-4">
-              {todasNotificaciones.map((n) =>
+              {notificaciones.map((n) =>
                 n.tipo === "visita" ? (
                   <NotificacionCard
                     key={`visita-${n.id}`}
-                    visita={n.data}
+                    visita={n}
                     onMarcarComoLeida={marcarComoLeida}
                     onSeleccionar={setVisitaSeleccionada}
-                    estaSeleccionada={
-                      visitaSeleccionada?.id_visita === n.data.id_visita
-                    }
                   />
                 ) : (
-                  <AlertaCard key={`alerta-${n.id}`} notificacion={n.data} />
+                  <AlertaCard key={`alerta-${n.id}`} notificacion={n} />
                 )
               )}
             </div>
