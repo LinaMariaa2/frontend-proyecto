@@ -36,9 +36,10 @@ const normalizarNotificacion = (p: NotificacionRecibida): Notificacion | null =>
 
   const tipo = p.tipo ?? "general";
   let titulo = p.titulo ?? "";
+
   if (!titulo) {
-    if (tipo === "riego") titulo = "Programación de riego";
-    else if (tipo === "iluminacion") titulo = "Programación de iluminación";
+    if (tipo === "inicio_riego" || tipo === "fin_riego") titulo = "Programación de riego";
+    else if (tipo === "iluminacion_inicio" || tipo === "iluminacion_fin") titulo = "Programación de iluminación";
     else titulo = "Notificación";
   }
 
@@ -54,6 +55,7 @@ const normalizarNotificacion = (p: NotificacionRecibida): Notificacion | null =>
     createdAt: fecha,
   };
 };
+
 
 // --- Función para formatear el tiempo relativo ---
 const formatTiempoRelativo = (timestamp: string): string => {
@@ -80,7 +82,7 @@ const NotificacionCard: React.FC<{
   onMarcarComoLeida: (id: number) => void;
 }> = ({ notificacion, onMarcarComoLeida }) => {
   const colorClasses =
-  notificacion.tipo === "inicio_riego" || notificacion.tipo === "fin_riego"
+  notificacion.tipo === "inicio_riego" || notificacion.tipo === "fin_riego" 
     ? { bg: "bg-teal-50", border: "border-teal-500", text: "text-teal-600" }
     : notificacion.tipo === "iluminacion" || notificacion.tipo === "iluminacion_inicio" || notificacion.tipo === "iluminacion_fin"
     ? { bg: "bg-yellow-50", border: "border-yellow-500", text: "text-yellow-600" }
@@ -145,7 +147,7 @@ export default function NotificacionesOperario() {
         .map(normalizarNotificacion)
         .filter(
           (n): n is Notificacion =>
-            n !== null && (n.tipo === "alerta_sensor" || n.tipo === "info_sensor" || n.tipo === "inicio_riego" || n.tipo === "fin_riego")
+            n !== null && (n.tipo === "alerta_sensor" || n.tipo === "info_sensor" || n.tipo === "inicio_riego" || n.tipo === "fin_riego" || n.tipo === "iluminacion_inicio" || n.tipo === "iluminacion_fin")
         )
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -173,7 +175,9 @@ export default function NotificacionesOperario() {
         normalizada.tipo !== "alerta_sensor" &&
         normalizada.tipo !== "info_sensor" &&
         normalizada.tipo !== "inicio_riego" &&
-        normalizada.tipo !== "fin_riego"
+        normalizada.tipo !== "fin_riego" &&
+        normalizada.tipo !== "iluminacion_inicio" &&
+        normalizada.tipo !== "iluminacion_fin"
       ) return;
 
       setNotificaciones((prev) => [normalizada, ...prev]);
