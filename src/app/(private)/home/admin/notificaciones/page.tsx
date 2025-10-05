@@ -226,6 +226,7 @@ export default function NotificacionesPage() {
     const socket: Socket = io("http://localhost:4000");
 
     socket.on("nuevaNotificacion", (payload: NotificacionSocket) => {
+       console.log("Revisando info entrante Nueva notificación recibida:", payload);
       if (payload.tipo !== "visita" && payload.tipo !== "alerta_hardware") return;
 
       // Generar ID correcto: visitas usan id_visita, hardware siempre id del backend
