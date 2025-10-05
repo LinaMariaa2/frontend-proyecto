@@ -155,10 +155,11 @@ export default function ZonasOperarioPage() {
           const arr = Array.isArray(res.data) ? res.data : [];
           newLecturas[z.id_zona] = arr.map((e: any) => ({
             actual: e.valor ?? e.actual ?? e.humedad ?? e.humedad_actual ?? 0,
-            min: e.min ?? e.minimo ?? e.min_humedad ?? 40,
-            max: e.max ?? e.maximo ?? e.max_humedad ?? 70,
+            min: e.humedad_min ?? e.min ?? e.minimo ?? 40,
+            max: e.humedad_max ?? e.max ?? e.maximo ?? 70,
             timestamp: e.timestamp ?? e.createdAt ?? e.fecha ?? new Date().toISOString(),
           })).slice(-20);
+
         } catch (e) {
           newLecturas[z.id_zona] = [];
         }
@@ -179,10 +180,11 @@ export default function ZonasOperarioPage() {
             const zonaLecturas = prev[data.id_zona] ? [...prev[data.id_zona]] : [];
             zonaLecturas.push({
               actual: data.valor ?? data.actual ?? data.humedad ?? 0,
-              min: data.min ?? data.minimo ?? 40,
-              max: data.max ?? data.maximo ?? 70,
+              min: data.humedad_min ?? data.min ?? 40,
+              max: data.humedad_max ?? data.max ?? 70,
               timestamp: data.timestamp ?? data.createdAt ?? new Date().toISOString(),
             });
+
             if (zonaLecturas.length > 20) zonaLecturas.shift();
             return { ...prev, [data.id_zona]: zonaLecturas };
           });
