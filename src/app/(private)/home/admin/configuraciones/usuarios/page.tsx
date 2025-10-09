@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import api from "@/app/services/api";
@@ -179,6 +178,7 @@ export default function GestionUsuariosPage() {
 
   // --- CRUD ---
   const handleCreate = async (formData: Partial<Usuario>) => {
+    setModal({ type: null }); // Cerrar el modal antes de la acción
     setActionLoading(true);
     try {
       await api.post("/users", formData);
@@ -210,6 +210,7 @@ export default function GestionUsuariosPage() {
     formData: Partial<Usuario>,
     fotoFile: File | null
   ) => {
+    setModal({ type: null }); // Cerrar el modal antes de la acción
     setActionLoading(true);
     try {
       await api.put(`/users/${id}`, formData);
@@ -245,6 +246,7 @@ export default function GestionUsuariosPage() {
         message:
           "Esta acción es permanente y no se puede deshacer. ¿Continuar?",
         onConfirm: async () => {
+          setModal({ type: null }); // Cerrar el modal de confirmación
           setActionLoading(true);
           try {
             await api.delete(`/users/${id}`);
@@ -287,13 +289,14 @@ export default function GestionUsuariosPage() {
             Administra los usuarios del sistema.
           </p>
         </div>
-        <Link
-          href="/home/admin/configuraciones/registro"
+        {/* CORRECCIÓN APLICADA AQUÍ: Reemplazar Link por button para abrir el modal */}
+        <button
+          onClick={() => setModal({ type: "create" })}
           className="px-5 py-2.5 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
         >
           <PlusCircle className="w-5 h-5" />
           <span>Crear Usuario</span>
-        </Link>
+        </button>
       </div>
 
       {/* FILTROS */}
@@ -440,6 +443,12 @@ function CreateUserModal({
     rol: "operario",
   });
 
+  // Validaciones simples para deshabilitar el botón
+  const isFormValid =
+    form.nombre_usuario.trim() !== "" &&
+    form.correo.trim() !== "" &&
+    form.contrasena.trim().length >= 6; // Asumir un mínimo de 6 caracteres para la contraseña
+
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
@@ -494,8 +503,8 @@ function CreateUserModal({
           </button>
           <button
             onClick={() => onConfirm(form)}
-            className="px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition flex items-center gap-2 disabled:bg-teal-400"
-            disabled={loading}
+            className="px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition flex items-center gap-2 disabled:bg-teal-400 disabled:cursor-not-allowed"
+            disabled={loading || !isFormValid}
           >
             {loading ? (
               <>
@@ -538,6 +547,10 @@ function EditUserModal({
       reader.readAsDataURL(file);
     }
   };
+
+  const isFormValid =
+    form.nombre_usuario?.trim() !== "" &&
+    form.correo?.trim() !== "";
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -637,8 +650,8 @@ function EditUserModal({
             onClick={() =>
               onConfirm(user.id_persona, form, fotoFile)
             }
-            className="px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition flex items-center gap-2 disabled:bg-teal-400"
-            disabled={loading}
+            className="px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition flex items-center gap-2 disabled:bg-teal-400 disabled:cursor-not-allowed"
+            disabled={loading || !isFormValid}
           >
             {loading ? (
               <>

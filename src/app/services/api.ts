@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+// 🔧 Si en tu .env tienes: NEXT_PUBLIC_BACKEND_URL=http://localhost:4000
+// aquí añadimos '/api' automáticamente:
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api`;
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -15,9 +17,7 @@ api.interceptors.request.use(
         }
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 api.interceptors.response.use(
@@ -30,12 +30,7 @@ api.interceptors.response.use(
             localStorage.removeItem('user');
             window.location.href = '/login';
         }
-        
-        return Promise.reject(error); // ya mostramos el mensaje
-        
-
-        
-        
+        return Promise.reject(error);
     }
 );
 
