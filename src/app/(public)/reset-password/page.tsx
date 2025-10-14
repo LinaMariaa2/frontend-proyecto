@@ -1,6 +1,6 @@
 "use client";
 export const dynamic = "force-dynamic";
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react'; // Importamos Suspense
 import Link from 'next/link';
 import Image from 'next/image';
 import { Lock, Loader2, CheckCircle2, AlertTriangle, Eye, EyeOff, ArrowLeft } from 'lucide-react';
@@ -11,7 +11,7 @@ interface MessageModalProps {
     title: string;
     message: string;
     onCerrar: () => void;
-    success?: boolean; // Propiedad opcional
+    success?: boolean;
 }
 
 // --- Componente de Modal de Mensaje ---
@@ -26,9 +26,11 @@ const MessageModal: React.FC<MessageModalProps> = ({ title, message, onCerrar, s
     </div>
 );
 
-export default function ResetPasswordPage() {
+// --- Componente principal con la lógica del formulario ---
+function ResetPasswordFormWrapper() { // Renombramos la función para que no coincida con el default export
     const router = useRouter();
     const searchParams = useSearchParams();
+    // La lectura de searchParams ocurre aquí, dentro del componente cliente.
     const email = searchParams.get('email');
     const code = searchParams.get('code');
 
@@ -57,6 +59,7 @@ export default function ResetPasswordPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // ... (Tu lógica de validación y fetch, sin cambios)
         if (password.length < 8) {
             setModal({ show: true, success: false, title: "Contraseña Inválida", message: "La contraseña debe tener al menos 8 caracteres." });
             return;
@@ -69,6 +72,7 @@ export default function ResetPasswordPage() {
         setLoading(true);
 
         try {
+            // Asegúrate de usar la URL de tu backend
             const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/reset-password`, {
                 method: 'POST',
                 headers: {
@@ -171,5 +175,14 @@ export default function ResetPasswordPage() {
             </div>
             {modal.show && <MessageModal title={modal.title} message={modal.message} success={modal.success} onCerrar={() => setModal({ ...modal, show: false })} />}
         </div>
+    );
+}
+
+// --- Componente que se exporta y añade el Suspense Boundary ---
+export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={<div>Cargando...</div>}>
+            <ResetPasswordFormWrapper />
+        </Suspense>
     );
 }

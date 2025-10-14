@@ -13,7 +13,7 @@ const nextConfig = {
   },
   // ... resto de tu configuración
   experimental: {
-    serverActions: true,
+    serverActions: {}, // CAMBIO: de 'true' a un objeto vacío para cumplir con la API de Next.js
   },
   eslint: {
     ignoreDuringBuilds: true,

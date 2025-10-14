@@ -17,6 +17,8 @@ const Toast: React.FC<ToastProps> = ({ message, duration = 3000, onClose }) => {
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
+  if (!message) return null; // evita renderizar si el mensaje está vacío
+
   return (
     <div className="fixed bottom-6 right-6 z-50 flex items-center bg-white border border-slate-300 shadow-lg rounded-lg px-4 py-3 animate-fade-in">
       <p className="text-slate-800 font-medium">{message}</p>

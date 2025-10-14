@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, JSX } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation"; // Ahora usado solo en el cliente
 import axios from "axios";
 import {
   LineChart,
@@ -29,12 +29,11 @@ import {
   Check,
   CircleDot,
   Wrench,
-  ChevronRight,
+  ArrowLeft,
   Droplets,
   Sun,
   Sprout,
-  Info,
-  ArrowLeft
+  Info
 } from "lucide-react";
 
 // --- Interfaces ---
@@ -116,10 +115,11 @@ const ZonaChart = ({ lecturas }: { lecturas: HumedadLectura[] }) => {
   );
 };
 
-// --- Página ---
-export default function ZonasPage() {
+// --- Página Cliente: ZonasContent ---
+export function ZonasContent() {
   const searchParams = useSearchParams();
-  const id_invernadero = searchParams.get("id_invernadero");
+  // El error ocurre aquí, pero al estar en un componente cliente dentro de Suspense, se resuelve.
+  const id_invernadero = searchParams.get("id_invernadero"); 
 
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [cultivosDisponibles, setCultivosDisponibles] = useState<Cultivo[]>([]);
@@ -222,12 +222,13 @@ export default function ZonasPage() {
       if (editando) {
         res = await axios.put(`http://localhost:4000/api/zona/${editando.id_zona}`, payload);
         const updatedZona = res.data?.zona ?? res.data;
-        const idCultivoFinal = updatedZona?.id_cultivo ?? payload.id_cultivo ?? null;
+        // La API puede devolver id_cultivo como null, lo manejamos.
+        const idCultivoFinal = updatedZona?.id_cultivo === undefined ? payload.id_cultivo : updatedZona.id_cultivo;
         setZonas(prev => prev.map(z => z.id_zona === editando.id_zona ? { ...z, ...updatedZona, id_cultivo: idCultivoFinal } : z));
       } else {
         res = await axios.post("http://localhost:4000/api/zona", payload);
         const newZona = res.data?.zona ?? res.data;
-        if (newZona && newZona.id_cultivo == null) newZona.id_cultivo = payload.id_cultivo ?? null;
+        if (newZona && newZona.id_cultivo === undefined) newZona.id_cultivo = payload.id_cultivo ?? null;
         setZonas(prev => [...prev, newZona]);
       }
 
@@ -250,6 +251,7 @@ export default function ZonasPage() {
       variant: 'default',
       onConfirm: async () => {
         try {
+          // Mapeo simple de estado a ruta de API
           const ruta = {"activo": "activar", "inactivo": "inactivar", "mantenimiento": "mantenimiento"}[nuevoEstado];
           await axios.patch(`http://localhost:4000/api/zona/${ruta}/${zona.id_zona}`);
           setZonas(zonas.map(z => z.id_zona === zona.id_zona ? {...z, estado: nuevoEstado as any} : z));
@@ -260,7 +262,8 @@ export default function ZonasPage() {
           setModalConfirm({ ...modalConfirm, show: false });
           setMenuOpenId(null);
         }
-      }
+      },
+      onCancel: () => setModalConfirm({ ...modalConfirm, show: false })
     });
   };
 
@@ -287,12 +290,13 @@ export default function ZonasPage() {
           setModalConfirm({ ...modalConfirm, show: false });
           setMenuOpenId(null);
         }
-      }
+      },
+      onCancel: () => setModalConfirm({ ...modalConfirm, show: false })
     });
   };
 
   const StatusBadge = ({ estado }: { estado: string }) => {
-    const config = {
+    const config: Record<string, { text: string, color: string, icon: JSX.Element }> = {
       activo: { text: "Activo", color: "bg-green-100 text-green-800", icon: <CheckCircle2 className="w-3 h-3" /> },
       inactivo: { text: "Inactivo", color: "bg-slate-100 text-slate-600", icon: <XCircle className="w-3 h-3" /> },
       mantenimiento: { text: "Mantenimiento", color: "bg-amber-100 text-amber-800", icon: <Wrench className="w-3 h-3" /> },
@@ -346,13 +350,19 @@ export default function ZonasPage() {
                     <div className="flex items-center gap-2 text-slate-600"><Sprout className="w-4 h-4"/><span>Cultivo: <span className="font-semibold">{cultivosDisponibles.find(c => c.id_cultivo === Number(zona.id_cultivo))?.nombre_cultivo || 'No asignado'}</span></span></div>
                     <div className="flex items-center gap-2"><StatusBadge estado={zona.estado} /></div>
                  </div>
-                 <ZonaChart lecturas={lecturas[zona.id_zona] || []} /> {/* --- NUEVO: lecturas por zona */}
+                 <ZonaChart lecturas={lecturas[zona.id_zona] || []} />
               </div>
               <div className="mt-auto border-t border-slate-200 bg-slate-50 p-4 grid grid-cols-2 gap-3">
-                 <Link href={`/home/admin/invernaderos/zonas/programacion-riego?id=${zona.id_zona}`} className="text-center font-semibold bg-blue-100 text-blue-800 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-blue-200 transition-colors">
+                 <Link 
+                    href={`/home/admin/invernaderos/zonas/programacion-riego?id=${zona.id_zona}`} 
+                    className="text-center font-semibold bg-blue-100 text-blue-800 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-blue-200 transition-colors"
+                 >
                     <Droplets className="w-4 h-4"/>Riego
                  </Link>
-                 <Link href={`/home/admin/invernaderos/zonas/programacion-iluminacion?id=${zona.id_zona}`} className="text-center font-semibold bg-amber-100 text-amber-800 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-amber-200 transition-colors">
+                 <Link 
+                    href={`/home/admin/invernaderos/zonas/programacion-iluminacion?id=${zona.id_zona}`} 
+                    className="text-center font-semibold bg-amber-100 text-amber-800 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-amber-200 transition-colors"
+                 >
                     <Sun className="w-4 h-4"/>Iluminación
                  </Link>
               </div>
@@ -369,16 +379,16 @@ export default function ZonasPage() {
               <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 p-2 text-slate-500 hover:bg-slate-100 rounded-full"><X/></button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto">
-              <input placeholder="Nombre de la zona" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="w-full border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <textarea placeholder="Descripción adicional" value={form.descripciones_add} onChange={(e) => setForm({ ...form, descripciones_add: e.target.value })} className="w-full border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" rows={3}/>
+              <input placeholder="Nombre de la zona" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <textarea placeholder="Descripción adicional" value={form.descripciones_add} onChange={(e) => setForm({ ...form, descripciones_add: e.target.value })} className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" rows={3}/>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Asignar Cultivo (Opcional)</label>
-                 <select value={form.id_cultivo} onChange={(e) => setForm({ ...form, id_cultivo: e.target.value })} className="w-full border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
+                  <select value={form.id_cultivo} onChange={(e) => setForm({ ...form, id_cultivo: e.target.value })} className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
                     <option value="">-- Sin cultivo asignado --</option>
                     {cultivosDisponibles.map((cultivo) => (
                         <option key={cultivo.id_cultivo} value={cultivo.id_cultivo}>{cultivo.nombre_cultivo}</option>
                     ))}
-                 </select>
+                  </select>
               </div>
             </div>
             <div className="p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl flex justify-end gap-3">

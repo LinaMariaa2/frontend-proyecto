@@ -1,7 +1,8 @@
 "use client";
 
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import api from "@/app/services/api";
 import { Plus, Pencil, PauseCircle, PlayCircle, Trash, X } from "lucide-react";
 import Toast from "@/app/(private)/home/admin/components/Toast";
@@ -15,11 +16,11 @@ interface ProgramacionIluminacion {
   estado: boolean;
 }
 
-export default function ProgramacionIluminacion() {
+function ProgramacionIluminacionContent() {
   const searchParams = useSearchParams();
   const zonaId = searchParams.get("id");
 
-  const [estadosDetenidos, setEstadosDetenidos] = useState<{ [id: number]: boolean }>({});
+  const [estadosDetenidos, setEstadosDetenidos] = useState<Record<number, boolean>>({});
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [programaciones, setProgramaciones] = useState<ProgramacionIluminacion[]>([]);
   const [form, setForm] = useState({ activacion: "", desactivacion: "", descripcion: "" });
@@ -27,35 +28,43 @@ export default function ProgramacionIluminacion() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const convertirFechaParaInput = (fechaISO: string) => {
+  // ✅ Convertir fecha ISO a formato local compatible con input datetime-local
+  const convertirFechaParaInput = (fechaISO: string): string => {
     const fecha = new Date(fechaISO);
     const tzOffset = fecha.getTimezoneOffset() * 60000;
     const fechaLocal = new Date(fecha.getTime() - tzOffset);
     return fechaLocal.toISOString().slice(0, 16);
   };
 
+  // ✅ Mostrar Toast
   const showToast = (msg: string) => {
     setToastMessage(msg);
   };
 
+  // ✅ Cargar programaciones al montar o cambiar zona
   useEffect(() => {
     if (!zonaId) return;
-    api
-      .get(`/programacionIluminacion/zona/${zonaId}/futuras`)
-      .then((res) => {
-        setProgramaciones(res.data);
+    const fetchData = async () => {
+      try {
+        const res = await api.get(`/programacionIluminacion/zona/${zonaId}/futuras`);
+        const data = res.data as ProgramacionIluminacion[];
+        setProgramaciones(data);
+
         const nuevosEstados: Record<number, boolean> = {};
-        (res.data as ProgramacionIluminacion[]).forEach((p) => {
+        data.forEach((p) => {
           nuevosEstados[p.id_iluminacion] = !p.estado;
         });
         setEstadosDetenidos(nuevosEstados);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Error al cargar programaciones:", err);
         showToast("❌ Error al cargar programaciones");
-      });
+      }
+    };
+
+    fetchData();
   }, [zonaId]);
 
+  // ✅ Validar programación antes de guardar
   const validarProgramacion = (): boolean => {
     const inicio = new Date(form.activacion);
     const fin = new Date(form.desactivacion);
@@ -91,6 +100,7 @@ export default function ProgramacionIluminacion() {
     return true;
   };
 
+  // ✅ Crear nueva programación
   const agregar = async () => {
     if (!form.activacion || !form.desactivacion || !form.descripcion) {
       showToast("⚠️ Por favor, completa todos los campos.");
@@ -120,26 +130,27 @@ export default function ProgramacionIluminacion() {
     }
   };
 
+  // ✅ Detener / Reanudar
   const detener = async (id: number) => {
     const nuevoEstado = !estadosDetenidos[id];
     try {
       await api.patch(`/programacionIluminacion/${id}/estado`, { activo: nuevoEstado });
       setEstadosDetenidos((prev) => ({ ...prev, [id]: nuevoEstado }));
       showToast(nuevoEstado ? "✅ Iluminación detenida" : "✅ Iluminación reanudada");
-    } catch (err: unknown) {
+    } catch (err) {
       console.error("Error al cambiar estado de programación:", err);
       showToast("❌ No se pudo actualizar el estado en el servidor");
     }
   };
 
+  // ✅ Actualizar programación existente
   const actualizarProgramacion = async () => {
     if (!form.activacion || !form.desactivacion || !form.descripcion) {
       showToast("⚠️ Por favor, completa todos los campos.");
       return;
     }
 
-    if (!validarProgramacion()) return;
-    if (editandoId === null) return;
+    if (!validarProgramacion() || editandoId === null) return;
 
     setLoading(true);
     try {
@@ -166,6 +177,7 @@ export default function ProgramacionIluminacion() {
     }
   };
 
+  // ✅ Eliminar
   const eliminarProgramacion = async (programacion: ProgramacionIluminacion) => {
     try {
       await api.delete(`/programacionIluminacion/${programacion.id_iluminacion}`);
@@ -173,7 +185,7 @@ export default function ProgramacionIluminacion() {
         prev.filter((p) => p.id_iluminacion !== programacion.id_iluminacion)
       );
       showToast("🗑️ Programación eliminada correctamente");
-    } catch (err: unknown) {
+    } catch (err) {
       console.error("Error al eliminar programación:", err);
       showToast("❌ No se pudo eliminar la programación");
     }
@@ -370,7 +382,17 @@ export default function ProgramacionIluminacion() {
         </div>
       )}
 
+      {/* Toast */}
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
     </main>
+  );
+}
+
+// ✅ Envolvemos con Suspense para soporte de renderizado en Next.js (App Router)
+export default function ProgramacionIluminacion() {
+  return (
+    <Suspense fallback={<div className="p-6 text-gray-700">Cargando programación...</div>}>
+      <ProgramacionIluminacionContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
 import api from "@/app/services/api";
 import { Plus, Pencil, PauseCircle, PlayCircle, Trash, X } from "lucide-react";
 import Toast from "@/app/(private)/home/admin/components/Toast";
@@ -15,7 +15,7 @@ interface ProgramacionIluminacion {
   estado: boolean;
 }
 
-export default function ProgramacionIluminacion() {
+function ProgramacionIluminacionContent() {
   const searchParams = useSearchParams();
   const zonaId = searchParams.get("id");
 
@@ -181,13 +181,11 @@ export default function ProgramacionIluminacion() {
 
   return (
     <main className="w-full bg-slate-50 min-h-screen p-6 sm:p-8">
-      {/* Header */}
       <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">
-            Programación de Iluminación - Zona {zonaId}
-          </h1>
-        </div>
+        <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">
+          Programación de Iluminación - Zona {zonaId}
+        </h1>
+
         <button
           onClick={() => {
             setEditandoId(null);
@@ -201,7 +199,7 @@ export default function ProgramacionIluminacion() {
         </button>
       </div>
 
-      {/* Cards */}
+      {/* LISTA */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {programaciones.map((p) => {
           const ahora = new Date();
@@ -252,7 +250,6 @@ export default function ProgramacionIluminacion() {
                   </button>
                 )}
 
-                {/* Editar */}
                 <button
                   onClick={() => {
                     setEditandoId(p.id_iluminacion);
@@ -274,7 +271,6 @@ export default function ProgramacionIluminacion() {
                   Editar
                 </button>
 
-                {/* Eliminar */}
                 <button
                   onClick={() => eliminarProgramacion(p)}
                   disabled={!puedeEditarEliminar}
@@ -293,7 +289,7 @@ export default function ProgramacionIluminacion() {
         })}
       </div>
 
-      {/* Modal */}
+      {/* MODAL */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative max-h-[90vh] flex flex-col">
@@ -310,41 +306,35 @@ export default function ProgramacionIluminacion() {
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Fecha y hora de activación
-                </label>
-                <input
-                  type="datetime-local"
-                  value={form.activacion}
-                  onChange={(e) => setForm({ ...form, activacion: e.target.value })}
-                  className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500"
-                />
-              </div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
+                Fecha y hora de activación
+              </label>
+              <input
+                type="datetime-local"
+                value={form.activacion}
+                onChange={(e) => setForm({ ...form, activacion: e.target.value })}
+                className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Fecha y hora de finalización
-                </label>
-                <input
-                  type="datetime-local"
-                  value={form.desactivacion}
-                  onChange={(e) => setForm({ ...form, desactivacion: e.target.value })}
-                  className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500"
-                />
-              </div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
+                Fecha y hora de finalización
+              </label>
+              <input
+                type="datetime-local"
+                value={form.desactivacion}
+                onChange={(e) => setForm({ ...form, desactivacion: e.target.value })}
+                className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Descripción
-                </label>
-                <input
-                  type="text"
-                  value={form.descripcion}
-                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                  className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500"
-                />
-              </div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
+                Descripción
+              </label>
+              <input
+                type="text"
+                value={form.descripcion}
+                onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
             </div>
 
             <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
@@ -372,5 +362,14 @@ export default function ProgramacionIluminacion() {
 
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
     </main>
+  );
+}
+
+export default function ProgramacionIluminacionPage() {
+  // 🔹 Suspense corrige el error de Next.js con useSearchParams
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Cargando...</div>}>
+      <ProgramacionIluminacionContent />
+    </Suspense>
   );
 }
