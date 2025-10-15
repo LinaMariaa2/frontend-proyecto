@@ -6,6 +6,7 @@ import { Plus, Pencil, PauseCircle, PlayCircle, Trash, X, Loader2, Info } from "
 // ----------------------------------------------------------------------
 
 // Interface simulada para compatibilidad de tipos
+// Nota: Next.js ignora las interfaces TypeScript en archivos .jsx, pero ayuda a la claridad
 interface ToastProps {
   message: string;
   onClose: () => void;
@@ -43,6 +44,7 @@ const Toast = ({ message, onClose }: ToastProps) => {
 // ----------------------------------------------------------------------
 
 // Simulación de useSearchParams para obtener el 'id' de la URL
+// ¡Esta función solo debe llamarse en el cliente!
 const useZonaId = () => {
   const [zonaId, setZonaId] = useState<string | null>(null);
 
@@ -139,8 +141,10 @@ const mockApi = {
 // ----------------------------------------------------------------------
 // 3. ProgramacionIluminacionContent (Componente principal)
 // ----------------------------------------------------------------------
+// Este componente AHORA está anidado para garantizar que 'useZonaId' se llame SOLO en el cliente.
 function ProgramacionIluminacionContent() {
-  const zonaId = useZonaId();
+  // Ahora es seguro llamar a useZonaId porque estamos en el componente del cliente
+  const zonaId = useZonaId(); 
 
   // El estado 'estado' de la DB (true/false) se usa para inicializar 'estadosDetenidos'.
   // estadosDetenidos[id] = true significa que está detenido, que es lo contrario de p.estado (activo).
@@ -590,14 +594,38 @@ function ProgramacionIluminacionContent() {
   );
 }
 
-// Wrapper necesario para el componente principal
+// ----------------------------------------------------------------------
+// 4. Componente de Exportación FINAL (Server-safe)
+// ----------------------------------------------------------------------
+
+// Este componente solo se usa para forzar la inicialización del lado del cliente.
+// No tiene lógica de navegador en la primera renderización (servidor).
 export default function ProgramacionIluminacionWrapper() {
+  const [isClient, setIsClient] = useState(false);
+
+  // useEffect se ejecuta SOLO en el navegador (cliente)
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
+  // Si no estamos en el cliente, mostramos un loading sin depender de 'window' o la URL.
+  if (!isClient) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-slate-50 p-6">
+            <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+            <p className="ml-3 text-lg text-teal-600">Preparando el panel de programación...</p>
+        </div>
+    );
+  }
+
+  // Una vez que sabemos que estamos en el cliente, renderizamos el componente principal.
+  // Usamos Suspense para manejar cualquier otro hook de cliente que pueda haber.
   return (
     <Suspense 
         fallback={
             <div className="flex items-center justify-center min-h-screen bg-slate-50 p-6">
                 <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-                <p className="ml-3 text-lg text-teal-600">Preparando el panel de programación...</p>
+                <p className="ml-3 text-lg text-teal-600">Cargando la interfaz de usuario...</p>
             </div>
         }
     >
