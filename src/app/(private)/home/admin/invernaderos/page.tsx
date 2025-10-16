@@ -70,6 +70,8 @@ interface MessageModalProps {
 }
 
 // --- Modales Personalizados (Componentes) ---
+
+// NO MODIFICADO: Estilos ya están bien definidos
 const ConfirmModal: React.FC<ConfirmModal> = ({
     title,
     message,
@@ -104,6 +106,7 @@ const ConfirmModal: React.FC<ConfirmModal> = ({
     </div>
 );
 
+// NO MODIFICADO: Estilos ya están bien definidos
 const MessageModal: React.FC<MessageModalProps> = ({
     title,
     message,
@@ -145,16 +148,16 @@ export default function InvernaderosPage() {
     const [editarModo, setEditarModo] = useState<number | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // ⭐ CORRECCIÓN CLAVE: Se añade 'onCancel' a la inicialización del estado
+    // Se mantiene la corrección previa
     const [modalConfirm, setModalConfirm] = useState<Omit<ConfirmModal, 'confirmText'> & { show: boolean, confirmText?: string }>({
         show: false,
         onConfirm: () => {},
-        onCancel: () => {}, // ✅ Propiedad faltante añadida
+        onCancel: () => {}, 
         title: "",
         message: "",
         confirmText: "Confirmar",
     });
-    
+    
     const [modalMessage, setModalMessage] = useState({
         show: false,
         title: "",
@@ -172,15 +175,15 @@ export default function InvernaderosPage() {
                 url = `/invernadero/operario/${responsableId}`;
             }
 
-            console.log(`DEBUG: API Call URL: ${url}`);
+            console.log(`DEBUG: API Call URL: ${url}`);
             const response = await api.get(url);
-            
-            if (Array.isArray(response.data)) {
-                setInvernaderos(response.data);
-            } else {
-                 console.error("Respuesta inesperada de la API (no es un array):", response.data);
-                 setInvernaderos([]); 
-            }
+            
+            if (Array.isArray(response.data)) {
+                setInvernaderos(response.data);
+            } else {
+                 console.error("Respuesta inesperada de la API (no es un array):", response.data);
+                 setInvernaderos([]); 
+            }
         } catch (error: any) {
             console.error("Error al obtener invernaderos:", error);
             setModalMessage({
@@ -189,7 +192,7 @@ export default function InvernaderosPage() {
                 message: error.response?.data?.error || "No se pudieron obtener los datos de los invernaderos. Revisa la consola y tu backend.",
                 success: false,
             });
-            setInvernaderos([]);
+            setInvernaderos([]);
         } finally {
             setCargando(false);
         }
@@ -332,7 +335,7 @@ export default function InvernaderosPage() {
                 setMenuOpenId(null);
             }
         };
-        // Línea 339
+        
         setModalConfirm({
             show: true,
             title: `Cambiar Estado a ${nuevoEstado.toUpperCase()}`,
@@ -378,17 +381,20 @@ export default function InvernaderosPage() {
         });
     };
 
-    // --- Funciones de Renderizado ---
+    // --- Funciones de Renderizado (Mejoradas) ---
     const getEstadoIcono = (estado: string) => {
         switch (estado) {
             case "activo":
-                return <span className="flex items-center text-green-600 font-semibold text-sm"><Check className="w-4 h-4 mr-1"/> Activo</span>;
+                // Estilo mejorado: Badge verde
+                return <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><Check className="w-3 h-3 mr-1"/> Activo</span>;
             case "inactivo":
-                return <span className="flex items-center text-red-600 font-semibold text-sm"><XCircle className="w-4 h-4 mr-1"/> Inactivo</span>;
+                // Estilo mejorado: Badge rojo
+                return <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1"/> Inactivo</span>;
             case "mantenimiento":
-                return <span className="flex items-center text-yellow-600 font-semibold text-sm"><Wrench className="w-4 h-4 mr-1"/> Mantenimiento</span>;
+                // Estilo mejorado: Badge amarillo
+                return <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><Wrench className="w-3 h-3 mr-1"/> Mantenimiento</span>;
             default:
-                return <span className="text-slate-500 text-sm">{estado}</span>;
+                return <span className="text-slate-500 text-xs">{estado}</span>;
         }
     };
 
@@ -399,16 +405,17 @@ export default function InvernaderosPage() {
             <div className="relative inline-block text-left" ref={isOpen ? menuRef : null}>
                 <button
                     onClick={() => setMenuOpenId(isOpen ? null : invernadero.id_invernadero)}
-                    className="inline-flex justify-center rounded-md p-1.5 text-slate-500 hover:bg-slate-100 transition-colors"
+                    // Pequeña mejora de estilo en el botón de menú
+                    className="inline-flex justify-center rounded-full p-2 text-slate-500 hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
                 >
                     <MoreVertical className="w-5 h-5" />
                 </button>
                 {isOpen && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
+                    <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-20 overflow-hidden">
                         <div className="py-1">
                             <button
                                 onClick={() => { setMenuOpenId(null); abrirModal(invernadero); }}
-                                className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 w-full text-left"
+                                className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-600 w-full text-left transition-colors"
                             >
                                 <Pencil className="w-4 h-4 mr-2" /> Editar
                             </button>
@@ -416,7 +423,7 @@ export default function InvernaderosPage() {
                             {invernadero.estado !== 'activo' && (
                                 <button
                                     onClick={() => cambiarEstado(invernadero.id_invernadero, 'activo')}
-                                    className="flex items-center px-4 py-2 text-sm text-green-700 hover:bg-slate-100 w-full text-left"
+                                    className="flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 hover:text-green-600 w-full text-left transition-colors"
                                 >
                                     <Check className="w-4 h-4 mr-2" /> Activar
                                 </button>
@@ -425,7 +432,7 @@ export default function InvernaderosPage() {
                             {invernadero.estado !== 'inactivo' && (
                                 <button
                                     onClick={() => cambiarEstado(invernadero.id_invernadero, 'inactivo')}
-                                    className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-slate-100 w-full text-left"
+                                    className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 hover:text-red-600 w-full text-left transition-colors"
                                 >
                                     <CircleDot className="w-4 h-4 mr-2" /> Inactivar
                                 </button>
@@ -434,7 +441,7 @@ export default function InvernaderosPage() {
                             {invernadero.estado !== 'mantenimiento' && (
                                 <button
                                     onClick={() => cambiarEstado(invernadero.id_invernadero, 'mantenimiento')}
-                                    className="flex items-center px-4 py-2 text-sm text-yellow-700 hover:bg-slate-100 w-full text-left"
+                                    className="flex items-center px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 hover:text-yellow-600 w-full text-left transition-colors"
                                 >
                                     <Wrench className="w-4 h-4 mr-2" /> Mantenimiento
                                 </button>
@@ -444,7 +451,7 @@ export default function InvernaderosPage() {
 
                             <button
                                 onClick={() => eliminarInvernadero(invernadero.id_invernadero)}
-                                className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                                className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors"
                             >
                                 <Trash2 className="w-4 h-4 mr-2" /> Eliminar
                             </button>
@@ -460,11 +467,11 @@ export default function InvernaderosPage() {
     const ModalCrearEditar = () => (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-2xl font-bold text-teal-700">
+                <div className="flex justify-between items-center mb-6 border-b pb-4">
+                    <h3 className="text-2xl font-extrabold text-teal-700">
                         {editarModo ? "Editar Invernadero" : "Crear Nuevo Invernadero"}
                     </h3>
-                    <button onClick={cerrarModal} className="text-slate-500 hover:text-slate-800 transition-colors">
+                    <button onClick={cerrarModal} className="text-slate-500 hover:text-red-500 transition-colors rounded-full p-1 hover:bg-red-50">
                         <X className="w-6 h-6" />
                     </button>
                 </div>
@@ -475,10 +482,11 @@ export default function InvernaderosPage() {
                         handleFormSubmit();
                         
                     }}
-                    className="space-y-4"
+                    className="space-y-6"
                 >
+                    {/* Input: Nombre */}
                     <div>
-                        <label htmlFor="nombre" className="block text-sm font-medium text-slate-700">Nombre</label>
+                        <label htmlFor="nombre" className="block text-sm font-semibold text-slate-700 mb-1">Nombre del Invernadero</label>
                         <input
                             type="text"
                             id="nombre"
@@ -486,12 +494,13 @@ export default function InvernaderosPage() {
                             value={form.nombre}
                             onChange={handleChange}
                             required
-                            className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 border"
+                            className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-3 border placeholder-slate-400"
                         />
                     </div>
 
+                    {/* Textarea: Descripción */}
                     <div>
-                        <label htmlFor="descripcion" className="block text-sm font-medium text-slate-700">Descripción</label>
+                        <label htmlFor="descripcion" className="block text-sm font-semibold text-slate-700 mb-1">Descripción</label>
                         <textarea
                             id="descripcion"
                             name="descripcion"
@@ -499,35 +508,39 @@ export default function InvernaderosPage() {
                             onChange={handleChange}
                             rows={3}
                             required
-                            className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 border"
+                            className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-3 border placeholder-slate-400"
                         />
                     </div>
 
-                    {/* SECCIÓN RESPONSABLE */}
-                    <div className="relative">
-                        <label htmlFor="responsable" className="block text-sm font-medium text-slate-700 mb-1">
-                            Responsable Asignado:
-                            {responsableSeleccionado ? (
-                                <span className="text-teal-600 font-semibold ml-2">
-                                    {responsableSeleccionado.nombre_usuario}
-                                </span>
-                            ) : (
-                                <span className="text-red-500 ml-2">No asignado</span>
-                            )}
+                    {/* SECCIÓN RESPONSABLE (Estilizada) */}
+                    <div className="relative p-3 border border-dashed border-teal-300 rounded-lg bg-teal-50">
+                        <label htmlFor="responsable" className="block text-sm font-bold text-teal-800 mb-2">
+                            Asignar Responsable
                         </label>
-                        <div className="relative mt-1">
+
+                        {/* Indicador de Responsable Actual */}
+                        <div className={`mb-3 flex items-center p-2 rounded-lg ${responsableSeleccionado ? 'bg-teal-100 border border-teal-400' : 'bg-red-100 border border-red-400'}`}>
+                            <User className={`w-5 h-5 mr-2 ${responsableSeleccionado ? 'text-teal-600' : 'text-red-600'}`} />
+                            <span className={`font-semibold text-sm ${responsableSeleccionado ? 'text-teal-800' : 'text-red-800'}`}>
+                                {responsableSeleccionado ? `${responsableSeleccionado.nombre_usuario} (${responsableSeleccionado.rol})` : 'Responsable no asignado'}
+                            </span>
+                        </div>
+
+                        {/* Input de Búsqueda */}
+                        <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                             <input
                                 type="text"
                                 placeholder="Buscar responsable por nombre..."
                                 value={busquedaResponsable}
                                 onChange={(e) => setBusquedaResponsable(e.target.value)}
-                                className="block w-full rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 pl-10 border"
+                                className="block w-full rounded-lg border-slate-300 shadow-inner focus:border-teal-500 focus:ring-teal-500 p-3 pl-10 border placeholder-slate-400"
                             />
                         </div>
 
+                        {/* Dropdown de Resultados de Búsqueda */}
                         {busquedaResponsable.trim() && responsables.length > 0 && (
-                            <ul className="absolute z-10 w-full bg-white border border-slate-300 rounded-md shadow-lg mt-1 max-h-48 overflow-y-auto">
+                            <ul className="absolute z-20 w-full bg-white border border-slate-200 rounded-lg shadow-xl mt-2 max-h-48 overflow-y-auto">
                                 {responsables.map((resp) => (
                                     <li
                                         key={resp.id_persona}
@@ -536,17 +549,18 @@ export default function InvernaderosPage() {
                                             setForm({ ...form, responsable_id: resp.id_persona });
                                             setBusquedaResponsable("");
                                         }}
-                                        className="p-2 flex items-center justify-between hover:bg-teal-50 cursor-pointer text-slate-700 text-sm"
+                                        className="p-3 flex items-center justify-between hover:bg-teal-50 cursor-pointer text-slate-700 text-sm border-b border-slate-100 last:border-b-0"
                                     >
-                                        <span>{resp.nombre_usuario} ({resp.rol})</span>
-                                        <User className="w-4 h-4 text-slate-400" />
+                                        <span className="font-medium">{resp.nombre_usuario}</span>
+                                        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{resp.rol}</span>
                                     </li>
                                 ))}
                             </ul>
                         )}
                     </div>
 
-                    <div className="flex justify-end pt-4">
+                    {/* Botones de Acción */}
+                    <div className="flex justify-end pt-6 border-t mt-6">
                         <button
                             type="button"
                             onClick={cerrarModal}
@@ -557,7 +571,7 @@ export default function InvernaderosPage() {
                         <button
                             type="submit"
                             disabled={guardando}
-                            className="px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors disabled:bg-teal-400 flex items-center"
+                            className="px-6 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors disabled:bg-teal-400 disabled:cursor-not-allowed flex items-center shadow-md hover:shadow-lg"
                         >
                             {guardando ? (
                                 <>
@@ -573,9 +587,9 @@ export default function InvernaderosPage() {
         </div>
     );
 
-    // --- Renderizado Principal del Componente ---
+    // --- Renderizado Principal del Componente (Estilizado) ---
     return (
-        <div className="p-6 bg-slate-50 min-h-screen">
+        <div className="p-4 md:p-8 bg-slate-50 min-h-screen">
             <header className="mb-8">
                 <h1 className="text-3xl font-extrabold text-slate-800 flex items-center">
                     <Building className="w-7 h-7 mr-3 text-teal-600" /> Gestión de Invernaderos
@@ -583,26 +597,27 @@ export default function InvernaderosPage() {
                 <p className="text-slate-500 mt-1">Administra la configuración y el estado de todos tus invernaderos.</p>
             </header>
 
-            <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="bg-white p-6 rounded-2xl shadow-xl">
                 {/* Toolbar */}
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-slate-700">Invernaderos Registrados ({invernaderos.length})</h2>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
+                    <h2 className="text-xl font-bold text-slate-700 mb-4 sm:mb-0">Lista de Invernaderos ({invernaderos.length})</h2>
                     <button
                         onClick={() => abrirModal()}
-                        className="flex items-center bg-teal-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-teal-700 transition-colors shadow-md"
+                        className="flex items-center bg-teal-600 text-white px-5 py-2 rounded-xl font-semibold hover:bg-teal-700 transition-colors shadow-md hover:shadow-lg text-sm"
                     >
                         <Plus className="w-5 h-5 mr-2" /> Crear Invernadero
                     </button>
                 </div>
                 
                 {/* Filtro por Responsable */}
-                <div className="mb-6">
-                    <label htmlFor="filtroResponsable" className="block text-sm font-medium text-slate-700 mb-1">Filtrar por Responsable:</label>
+                <div className="mb-6 flex flex-col md:flex-row items-start md:items-center">
+                    <label htmlFor="filtroResponsable" className="text-sm font-semibold text-slate-700 mb-1 mr-4">Filtrar por Responsable:</label>
                     <select
                         id="filtroResponsable"
                         value={filtroResponsableId || ""}
                         onChange={(e) => setFiltroResponsableId(e.target.value === "" ? null : Number(e.target.value))}
-                        className="mt-1 block w-full max-w-xs rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 border"
+                        // Estilo mejorado en el select
+                        className="mt-1 block w-full md:max-w-xs rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 border bg-white"
                     >
                         <option value="">Mostrar todos</option>
                         {/* Aquí podrías listar dinámicamente los responsables si tuvieras esa data */}
@@ -612,44 +627,45 @@ export default function InvernaderosPage() {
 
                 {/* Contenido de la Tabla o Carga */}
                 {cargando ? (
-                    <div className="flex justify-center items-center p-10 text-teal-600">
-                        <Loader2 className="w-8 h-8 mr-3 animate-spin" />
-                        Cargando invernaderos...
+                    <div className="flex flex-col justify-center items-center p-10 text-teal-600 bg-teal-50 rounded-lg border border-teal-200">
+                        <Loader2 className="w-8 h-8 mb-3 animate-spin" />
+                        <p className="font-medium">Cargando invernaderos...</p>
                     </div>
                 ) : invernaderos.length === 0 ? (
-                    <div className="text-center p-10 bg-slate-50 rounded-lg">
+                    <div className="text-center p-12 bg-slate-50 rounded-xl border border-slate-200">
                         <AlertTriangle className="w-12 h-12 mx-auto text-amber-500 mb-3" />
-                        <p className="text-slate-600 font-semibold">No se encontraron invernaderos.</p>
-                        <p className="text-slate-500 text-sm">Crea uno nuevo para empezar.</p>
+                        <p className="text-slate-600 font-bold text-lg">No se encontraron invernaderos.</p>
+                        <p className="text-slate-500 mt-2">Crea uno nuevo utilizando el botón "Crear Invernadero".</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto shadow-md rounded-lg border border-slate-200">
                         <table className="min-w-full divide-y divide-slate-200">
-                            <thead className="bg-slate-50">
+                            <thead className="bg-teal-600">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ID</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nombre</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Responsable</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Zonas</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider rounded-tl-lg">ID</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Nombre</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Responsable</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Zonas</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Estado</th>
+                                    <th className="px-6 py-3 text-right text-xs font-bold text-white uppercase tracking-wider rounded-tr-lg">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-slate-200">
-                                {invernaderos.map((inv) => (
-                                    <tr key={inv.id_invernadero} className="hover:bg-slate-50 transition-colors">
+                            <tbody className="bg-white divide-y divide-slate-100">
+                                {invernaderos.map((inv, index) => (
+                                    <tr key={inv.id_invernadero} className="hover:bg-teal-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{inv.id_invernadero}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <Link href={`/dashboard/invernaderos/${inv.id_invernadero}/zonas`} className="text-teal-600 hover:text-teal-800 font-semibold flex items-center">
+                                            <Link href={`/dashboard/invernaderos/${inv.id_invernadero}/zonas`} className="text-teal-600 hover:text-teal-800 font-bold flex items-center group">
                                                 {inv.nombre}
-                                                <ChevronRight className="w-4 h-4 ml-1" />
+                                                <ChevronRight className="w-4 h-4 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </Link>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                                            {inv.encargado ? `${inv.encargado.nombre_usuario} (${inv.encargado.rol})` : 'N/A'}
+                                            {inv.encargado ? `${inv.encargado.nombre_usuario} ` : 'N/A'}
+                                            {inv.encargado && <span className="text-xs bg-slate-200 px-2 py-0.5 rounded-full">{inv.encargado.rol}</span>}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                                            {inv.zonas_activas} / {inv.zonas_totales} (Activas/Totales)
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">
+                                            <span className="font-bold text-teal-600">{inv.zonas_activas}</span> / {inv.zonas_totales}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             {getEstadoIcono(inv.estado)}
