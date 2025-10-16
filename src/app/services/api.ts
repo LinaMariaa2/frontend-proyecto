@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 
-const DEPLOYED_BACKEND_URL = 'https://backendhortitech.onrender.com'; 
+const DEPLOYED_BACKEND_URL = 'https://backendhortitech.onrender.com/api'; 
 
 // Ahora usamos la URL desplegada.
 const API_BASE_URL = `${DEPLOYED_BACKEND_URL}/api`;
