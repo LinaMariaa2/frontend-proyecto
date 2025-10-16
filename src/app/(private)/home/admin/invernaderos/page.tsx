@@ -160,9 +160,9 @@ export default function InvernaderosPage() {
     const obtenerInvernaderos = async (responsableId: number | null = filtroResponsableId) => {
         setCargando(true);
         try {
-            let url = "/api/invernadero";
+            let url = "/invernadero";
             if (responsableId) {
-                url = `/api/invernadero/operario/${responsableId}`;
+                url = `/invernadero/operario/${responsableId}`;
             }
             const response = await api.get(url);
             setInvernaderos(response.data);
@@ -193,7 +193,7 @@ export default function InvernaderosPage() {
         const controller = new AbortController();
         const debounce = setTimeout(async () => {
             try {
-                const response = await api.get(`/api/persona?filtro=${encodeURIComponent(busquedaResponsable)}`, {
+                const response = await api.get(`/persona?filtro=${encodeURIComponent(busquedaResponsable)}`, {
                     signal: controller.signal,
                 });
                 setResponsables(Array.isArray(response.data) ? response.data : []);
@@ -256,9 +256,9 @@ export default function InvernaderosPage() {
                 responsable_id: form.responsable_id,
             };
             if (editarModo) {
-                await api.put(`/api/invernadero/${editarModo}`, payload);
+                await api.put(`/invernadero/${editarModo}`, payload);
             } else {
-                await api.post("/api/invernadero", { ...payload, estado: "activo" });
+                await api.post("/invernadero", { ...payload, estado: "activo" });
             }
             await obtenerInvernaderos();
             cerrarModal();
@@ -287,7 +287,7 @@ export default function InvernaderosPage() {
                     inactivo: "inactivar",
                     mantenimiento: "mantenimiento",
                 }[nuevoEstado];
-                await api.patch(`/api/invernadero/${ruta}/${id}`);
+                await api.patch(`/invernadero/${ruta}/${id}`);
                 await obtenerInvernaderos();
                 setModalMessage({
                     show: true,
@@ -325,7 +325,7 @@ export default function InvernaderosPage() {
             confirmText: "Eliminar",
             onConfirm: async () => {
                 try {
-                    await api.delete(`/api/invernadero/${id}`);
+                    await api.delete(`/invernadero/${id}`);
                     await obtenerInvernaderos();
                     setModalMessage({
                         show: true,
