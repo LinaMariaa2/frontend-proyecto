@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useRef, JSX } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation"; 
-// 🚨 CAMBIA ESTA RUTA POR LA RUTA REAL A TU ARCHIVO app.ts (o donde tengas tu cliente 'api')
 import api from "@/app/services/api";
 import {
   LineChart,

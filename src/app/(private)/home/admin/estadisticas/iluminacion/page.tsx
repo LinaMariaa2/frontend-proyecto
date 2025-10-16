@@ -79,7 +79,9 @@ const datosIluminacion = {
 
 const coloresPie = ["#fd8b08ff", "#f0fc4dff", "#fbbf24"];
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+// 🚀 RUTA DE BACKEND DESPLEGADO (Tomada de tu api.ts)
+const DEPLOYED_BACKEND_URL = 'https://backendhortitech.onrender.com';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || DEPLOYED_BACKEND_URL;
 
 // CARD GENERAL
 function Card({
@@ -246,9 +248,10 @@ export default function EstadisticasIluminacion() {
     fetchHistorialIluminacion();
   }, []);
 
- // 🔹 CONEXIÓN A SOCKET.IO PARA ESCUCHAR NUEVAS LECTURAS DEL DHT11
+// 🔹 CONEXIÓN A SOCKET.IO PARA ESCUCHAR NUEVAS LECTURAS DEL DHT11 (Ruta corregida)
 useEffect(() => {
-  const socket = io("http://localhost:4000", {
+  // ✅ Usamos la URL del backend desplegado directamente para Socket.IO
+  const socket = io(DEPLOYED_BACKEND_URL, { 
     transports: ["websocket"],
   });
 
@@ -287,6 +290,7 @@ useEffect(() => {
     setModalDataType("invernaderos");
     setShowModal(true);
     try {
+      // ✅ Uso de BACKEND_URL, que ahora apunta a la URL desplegada
       const res = await fetch(`${BACKEND_URL}/api/invernadero/datos-activos`);
       if (!res.ok) {
         throw new Error("Error al obtener los invernaderos activos");
@@ -307,6 +311,7 @@ useEffect(() => {
     setModalDataType("zonas");
     setShowModal(true);
     try {
+      // ✅ Uso de BACKEND_URL, que ahora apunta a la URL desplegada
       const res = await fetch(`${BACKEND_URL}/api/zona/datos-activos`);
       if (!res.ok) {
         throw new Error("Error al obtener las zonas activas");
