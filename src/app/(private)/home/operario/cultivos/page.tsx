@@ -51,7 +51,7 @@ export default function CultivosOperarioPage() {
       }
 
       try {
-        const res = await axios.get(`http://localhost:4000/api/cultivos/operario/${user.id_persona}`);
+        const res = await axios.get(`https://backendhortitech.onrender.com/api/cultivos/operario/${user.id_persona}`);
         setCultivos(res.data);
       } catch (err) {
         console.error('Error al cargar cultivos:', err);

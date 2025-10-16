@@ -85,7 +85,7 @@ export default function EstadisticasIluminacion() {
   const [humedad, setHumedad] = useState<string>("-- %");
 
   useEffect(() => {
-    const socket = io("http://localhost:4000", {
+    const socket = io("https://backendhortitech.onrender.com", {
       transports: ["websocket"],
     });
 
