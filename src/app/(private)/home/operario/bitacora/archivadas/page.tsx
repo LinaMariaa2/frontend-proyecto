@@ -54,7 +54,7 @@ export default function ArchivadasPage() {
     const fetchArchivadas = async () => {
         setLoading(true);
         try {
-            const res = await axios.get("http://localhost:4000/api/bitacora?archivadas=true");
+            const res = await axios.get("https://backendhortitech.onrender.com/api/bitacora?archivadas=true");
             setPublicaciones(res.data);
         } catch (err) {
             console.error("Error al obtener archivadas", err);
@@ -68,7 +68,7 @@ export default function ArchivadasPage() {
 
   const desarchivar = async (id: number) => {
     try {
-      await axios.patch(`http://localhost:4000/api/bitacora/${id}/desarchivar`);
+      await axios.patch(`https://backendhortitech.onrender.com/api/bitacora/${id}/desarchivar`);
       setPublicaciones((prev) => prev.filter((pub) => pub.id_publicacion !== id));
       setModalMessage({ show: true, success: true, title: "Restaurado", message: "La publicación ha sido restaurada a la bitácora principal." });
     } catch (err) {

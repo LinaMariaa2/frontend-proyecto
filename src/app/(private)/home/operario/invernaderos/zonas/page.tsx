@@ -115,8 +115,8 @@ function ZonasContent() {
       setLoading(true);
       try {
         const [zonasRes, cultivosRes] = await Promise.all([
-            axios.get(`http://localhost:4000/api/zona/invernadero/${id_invernadero}`),
-            axios.get("http://localhost:4000/api/cultivos")
+            axios.get(`https://backendhortitech.onrender.com/api/zona/invernadero/${id_invernadero}`),
+            axios.get("https://backendhortitech.onrender.com/api/cultivos")
         ]);
         setZonas(zonasRes.data);
         setCultivosDisponibles(cultivosRes.data);
@@ -136,7 +136,7 @@ function ZonasContent() {
       const newLecturas: { [key: number]: HumedadLectura[] } = {};
       await Promise.all(zonas.map(async (z) => {
         try {
-          const res = await axios.get(`http://localhost:4000/api/lecturas/humedad/${z.id_zona}`);
+          const res = await axios.get(`https://backendhortitech.onrender.com/api/lecturas/humedad/${z.id_zona}`);
           const arr = Array.isArray(res.data) ? res.data : [];
           newLecturas[z.id_zona] = arr.map((e: any) => ({
             actual: e.valor ?? e.actual ?? e.humedad ?? e.humedad_actual ?? 0,
@@ -157,7 +157,7 @@ function ZonasContent() {
 
   // Socket.io para lecturas en tiempo real 
   useEffect(() => {
-    const socket = io("http://localhost:4000");
+    const socket = io("https://backendhortitech.onrender.com");
     socket.on("nuevaLectura", (data: any) => {
       try {
         if (data.tipo_sensor === "humedad" && data.id_zona) {
