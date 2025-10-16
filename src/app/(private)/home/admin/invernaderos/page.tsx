@@ -23,6 +23,10 @@ import {
     ChevronRight
 } from "lucide-react";
 
+// *** URL BASE DEL BACKEND DESPLEGADO (CORREGIDA) ***
+const BACKEND_URL = "https://backend-deploy-production.up.railway.app";
+// *************************************************
+
 // --- Interfaces ---
 interface Invernadero {
     id_invernadero: number;
@@ -67,7 +71,7 @@ interface MessageModalProps {
     success?: boolean;
 }
 
-// --- Modales Personalizados (Componentes con Estilos) ---
+// --- Modales Personalizados (con Estilos del archivo original) ---
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
     title,
     message,
@@ -104,7 +108,7 @@ const MessageModal: React.FC<MessageModalProps> = ({
     </div>
 );
 
-// --- Componente de Badge de Estado (con Estilos) ---
+// --- Componente de Badge de Estado (con Estilos del archivo original) ---
 const StatusBadge: React.FC<{ estado: "activo" | "inactivo" | "mantenimiento" }> = ({ estado }) => {
     const config = {
         activo: { text: "Activo", color: "bg-green-100 text-green-800", icon: <CheckCircle2 className="w-3 h-3" /> },
@@ -121,7 +125,6 @@ export default function InvernaderosPage() {
     const [responsables, setResponsables] = useState<Responsable[]>([]);
     const [busquedaResponsable, setBusquedaResponsable] = useState("");
     const [responsableSeleccionado, setResponsableSeleccionado] = useState<Responsable | null>(null);
-    // Nuevo estado para la búsqueda por responsable en el listado
     const [filtroResponsableId, setFiltroResponsableId] = useState<number | null>(null); 
     const [form, setForm] = useState(formInicial);
     const [modalOpen, setModalOpen] = useState(false);
@@ -134,14 +137,14 @@ export default function InvernaderosPage() {
     const [modalConfirm, setModalConfirm] = useState<{ show: boolean; onConfirm: () => void; title: string; message: string; confirmText: string }>({ show: false, onConfirm: () => {}, title: '', message: '', confirmText: 'Confirmar' });
     const [modalMessage, setModalMessage] = useState<{ show: boolean; title: string; message: string; success: boolean }>({ show: false, title: '', message: '', success: true });
 
-    // Modificada para aceptar un ID de responsable
+    // Modificada para aceptar un ID de responsable y USA URL CORREGIDA
     const obtenerInvernaderos = async (responsableId: number | null = filtroResponsableId) => {
         setCargando(true);
         try {
-            let url = "http://localhost:4000/api/invernadero";
+            let url = `${BACKEND_URL}/api/invernadero`;
             if (responsableId) {
                 // Usa la nueva ruta para filtrar por operario
-                url = `http://localhost:4000/api/invernadero/operario/${responsableId}`;
+                url = `${BACKEND_URL}/api/invernadero/operario/${responsableId}`;
             }
             const response = await axios.get(url);
             setInvernaderos(response.data);
@@ -158,7 +161,7 @@ export default function InvernaderosPage() {
         obtenerInvernaderos(filtroResponsableId);
     }, [filtroResponsableId]);
 
-    // Lógica de búsqueda de responsables para el MODAL (se mantiene)
+    // Lógica de búsqueda de responsables para el MODAL y USA URL CORREGIDA
     useEffect(() => {
         if (!busquedaResponsable.trim()) {
             setResponsables([]);
@@ -169,7 +172,7 @@ export default function InvernaderosPage() {
         const debounce = setTimeout(async () => {
             try {
                 const response = await axios.get(
-                    `http://localhost:4000/api/persona?filtro=${encodeURIComponent(busquedaResponsable)}`,
+                    `${BACKEND_URL}/api/persona?filtro=${encodeURIComponent(busquedaResponsable)}`,
                     { signal: controller.signal }
                 );
                 setResponsables(Array.isArray(response.data) ? response.data : []);
@@ -217,7 +220,7 @@ export default function InvernaderosPage() {
         setResponsables([]);
     }
     
-
+    // Función de envío de formulario y USA URL CORREGIDA
     const handleFormSubmit = async () => {
         if (!form.nombre.trim() || !form.descripcion.trim() || !form.responsable_id) {
             setModalMessage({ show: true, title: "Campos Incompletos", message: "Por favor, completa el nombre, la descripción y asigna un responsable.", success: false });
@@ -231,9 +234,9 @@ export default function InvernaderosPage() {
                 responsable_id: form.responsable_id,
             };
             if (editarModo) {
-                await axios.put(`http://localhost:4000/api/invernadero/${editarModo}`, payload);
+                await axios.put(`${BACKEND_URL}/api/invernadero/${editarModo}`, payload);
             } else {
-                await axios.post("http://localhost:4000/api/invernadero", {...payload, estado: 'activo'});
+                await axios.post(`${BACKEND_URL}/api/invernadero`, {...payload, estado: 'activo'});
             }
             await obtenerInvernaderos();
             cerrarModal();
@@ -246,11 +249,12 @@ export default function InvernaderosPage() {
         }
     };
 
+    // Función de cambio de estado y USA URL CORREGIDA
     const cambiarEstado = (id: number, nuevoEstado: string) => {
         const onConfirm = async () => {
             try {
                 const ruta = {"activo": "activar", "inactivo": "inactivar", "mantenimiento": "mantenimiento"}[nuevoEstado];
-                await axios.patch(`http://localhost:4000/api/invernadero/${ruta}/${id}`);
+                await axios.patch(`${BACKEND_URL}/api/invernadero/${ruta}/${id}`);
                 await obtenerInvernaderos();
                 setModalMessage({ show: true, title: "Estado Actualizado", message: "El estado del invernadero ha sido actualizado.", success: true });
             } catch (error: any) {
@@ -269,6 +273,7 @@ export default function InvernaderosPage() {
         });
     };
 
+    // Función de eliminación y USA URL CORREGIDA
     const eliminarInvernadero = (id: number) => {
         setModalConfirm({
             show: true,
@@ -277,7 +282,7 @@ export default function InvernaderosPage() {
             confirmText: "Eliminar",
             onConfirm: async () => {
                 try {
-                    await axios.delete(`http://localhost:4000/api/invernadero/${id}`);
+                    await axios.delete(`${BACKEND_URL}/api/invernadero/${id}`);
                     await obtenerInvernaderos();
                     setModalMessage({ show: true, title: "Eliminado", message: "El invernadero ha sido eliminado.", success: true });
                 } catch (error: any) {
@@ -290,7 +295,7 @@ export default function InvernaderosPage() {
         });
     };
     
-    // Lógica de búsqueda de responsables para el FILTRO PRINCIPAL
+    // Lógica de búsqueda de responsables para el FILTRO PRINCIPAL y USA URL CORREGIDA
     const [busquedaFiltro, setBusquedaFiltro] = useState("");
     const [responsablesFiltro, setResponsablesFiltro] = useState<Responsable[]>([]);
 
@@ -304,7 +309,7 @@ export default function InvernaderosPage() {
         const debounce = setTimeout(async () => {
             try {
                 const response = await axios.get(
-                    `http://localhost:4000/api/persona?filtro=${encodeURIComponent(busquedaFiltro)}`,
+                    `${BACKEND_URL}/api/persona?filtro=${encodeURIComponent(busquedaFiltro)}`,
                     { signal: controller.signal }
                 );
                 setResponsablesFiltro(Array.isArray(response.data) ? response.data : []);
@@ -346,7 +351,7 @@ export default function InvernaderosPage() {
                 </button>
             </div>
             
-            {/* Nuevo Componente de Búsqueda/Filtro */}
+            {/* Componente de Búsqueda/Filtro con estilos aplicados */}
             <div className="mb-8 p-4 bg-white rounded-xl shadow-sm border border-slate-200">
                 <div className="relative">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -356,7 +361,6 @@ export default function InvernaderosPage() {
                         value={busquedaFiltro} 
                         onChange={(e) => {
                             setBusquedaFiltro(e.target.value);
-                            // Esta lógica se mantiene para limpiar el filtro si el texto no coincide con el responsable filtrado
                             if (filtroResponsableId && e.target.value !== "" && e.target.value !== invernaderos.find(i => i.responsable_id === filtroResponsableId)?.encargado?.nombre_usuario) {
                                 setFiltroResponsableId(null);
                             }
@@ -391,7 +395,7 @@ export default function InvernaderosPage() {
                     )}
                 </p>
             </div>
-            {/* Fin Nuevo Componente de Búsqueda/Filtro */}
+            {/* Fin Componente de Búsqueda/Filtro */}
 
             {cargando ? (
                 <div className="text-center py-20"><Loader2 className="w-12 h-12 mx-auto text-teal-600 animate-spin" /><p className="mt-4 text-slate-500">Cargando invernaderos...</p></div>
@@ -404,7 +408,6 @@ export default function InvernaderosPage() {
                         </div>
                     ) : (
                         invernaderos.map((inv) => (
-                            // Tarjeta de Invernadero (con Estilos)
                             <div key={inv.id_invernadero} className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden group hover:shadow-lg transition-shadow duration-300">
                                 <div className="p-5">
                                     <div className="flex justify-between items-start mb-2">
@@ -414,7 +417,6 @@ export default function InvernaderosPage() {
                                             {menuOpenId === inv.id_invernadero && (
                                                 <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 shadow-lg rounded-lg z-10 overflow-hidden">
                                                     <button onClick={() => abrirModal(inv)} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><Pencil className="w-4 h-4"/> Editar</button>
-                                                    {/* Opciones de cambio de estado */}
                                                     <button onClick={() => cambiarEstado(inv.id_invernadero, "activo")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><Check className="w-4 h-4 text-green-500"/> Activar</button>
                                                     <button onClick={() => cambiarEstado(inv.id_invernadero, "inactivo")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><CircleDot className="w-4 h-4 text-slate-500"/> Inactivar</button>
                                                     <button onClick={() => cambiarEstado(inv.id_invernadero, "mantenimiento")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><Wrench className="w-4 h-4 text-amber-500"/> Mantenimiento</button>
@@ -443,7 +445,7 @@ export default function InvernaderosPage() {
                 </div>
             )}
             
-            {/* Modal de Creación/Edición (con Estilos) */}
+            {/* Modal de Creación/Edición con estilos aplicados */}
             {modalOpen && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative max-h-[90vh] flex flex-col">
@@ -506,7 +508,7 @@ export default function InvernaderosPage() {
                 </div>
             )}
 
-            {/* Modales de Confirmación y Mensaje (con Estilos) */}
+            {/* Modales de Confirmación y Mensaje con estilos aplicados */}
             {modalConfirm.show && <ConfirmModal title={modalConfirm.title} message={modalConfirm.message} onConfirm={modalConfirm.onConfirm} onCancel={() => setModalConfirm({ ...modalConfirm, show: false })} confirmText={modalConfirm.confirmText} />}
             {modalMessage.show && <MessageModal title={modalMessage.title} message={modalMessage.message} success={modalMessage.success} onCerrar={() => setModalMessage({ ...modalMessage, show: false })} />}
         </main>
